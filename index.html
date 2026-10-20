@@ -147,9 +147,9 @@ pre.code{margin:0;padding:16px 20px 40px;font-family:var(--f-mono);font-size:11.
 .device{position:relative;overflow:hidden;border-radius:30px;box-shadow:0 0 0 1px var(--line),0 18px 50px -24px rgba(10,14,40,.35);background:#000;isolation:isolate}
 .device canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 .comp{position:absolute;inset:0;pointer-events:none}
-.comp .item{position:absolute;left:0;top:0;border-radius:14px;background:rgba(255,255,255,.22);will-change:transform,opacity}
-.comp .item::before{content:"";position:absolute;left:12px;top:50%;width:var(--ic);height:var(--ic);margin-top:calc(var(--ic) / -2);border-radius:50%;background:rgba(255,255,255,.88)}
-.comp .item::after{content:"";position:absolute;left:calc(24px + var(--ic));top:calc(50% - 10px);width:45%;height:7px;border-radius:4px;background:rgba(255,255,255,.88);box-shadow:0 13px 0 -1px rgba(255,255,255,.55)}
+.comp .item{position:absolute;left:0;top:0;border-radius:14px;background:var(--rb,rgba(255,255,255,.22));will-change:transform,opacity}
+.comp .item::before{content:"";position:absolute;left:12px;top:50%;width:var(--ic);height:var(--ic);margin-top:calc(var(--ic) / -2);border-radius:50%;background:var(--ri,rgba(255,255,255,.88))}
+.comp .item::after{content:"";position:absolute;left:calc(24px + var(--ic));top:calc(50% - 10px);width:45%;height:7px;border-radius:4px;background:var(--r1,rgba(255,255,255,.88));box-shadow:0 13px 0 -1px var(--r2,rgba(255,255,255,.55))}
 .hud{position:absolute;inset:0;pointer-events:none;font-family:var(--f-ui);color:var(--hud,#6b7080)}
 .hud span{position:absolute;font-weight:600}
 .cap{font-size:12px;color:var(--muted);display:flex;gap:8px;align-items:center}
@@ -346,11 +346,11 @@ pre.code{margin:0;padding:16px 20px 40px;font-family:var(--f-mono);font-size:11.
     <div>
       <h2>한 사이클</h2>
       <table class="spec-table"><tbody>
-        <tr><td>나타남 · 대기</td><td>화면 상단에 납작한 상태로 서서히 나타남</td></tr>
-        <tr><td>L1 · 떠오름 · 부유</td><td>구로 부풀어 떠오르고 그림자가 생김. 천천히 위아래로 떠다님</td></tr>
-        <tr><td>L2 · 확산 · 안착</td><td>넓게 퍼지며 카드로 내려앉고, 그 자리에서 리스트 3줄이 차례로 생성</td></tr>
-        <tr><td>L3 · 전체 화면</td><td>화면 전체로 확산되어 가장자리 글로우만 남음</td></tr>
-        <tr><td>수축 · 사라짐</td><td>상단으로 줄어들며 완전히 사라졌다가, 납작한 상태로 다시 나타나며 무한 반복</td></tr>
+        <tr><td>나타남</td><td>화면 상단에 구가 페이드 인</td></tr>
+        <tr><td>L1 · 부유</td><td>그림자를 드리운 채 천천히 위아래로 떠다님</td></tr>
+        <tr><td>L2 · 확산 · 끼어들기</td><td>넓게 퍼지며 카드가 되어 앱 콘텐츠 사이에 끼어듦. 아래 콘텐츠는 밀려 내려가고, 카드 안에 리스트 3줄이 차례로 생성</td></tr>
+        <tr><td>L3 · 전체 화면 리스트</td><td>화면 전체로 확산되어 가장자리 글로우가 되고, 리스트가 전체 화면 레이아웃(5줄)으로 재배치</td></tr>
+        <tr><td>사라짐</td><td>제자리에서 페이드 아웃, 밀렸던 콘텐츠는 원래 위치로 돌아가며 무한 반복</td></tr>
       </tbody></table>
     </div>
     <div>
@@ -404,9 +404,9 @@ function defaultSpec(){
     version:1,
     stops: PRESETS.azure.stops.map(s=>({...s})), preset:'azure', gradType:'radial', angle:90, hlX:0, hlY:-0.3,
     material:'softGlow', matParams:Object.fromEntries(MAT_KEYS.map(k=>[k,[...MATS[k].def]])),
-    diameter:92, flatRatio:0.6, flatThick:4, cardH:220, cardThick:8, cardCorner:28, margin:16,
+    diameter:92, cardH:220, cardThick:8, cardCorner:28, margin:16,
     shadow:0.6, shadowBlur:18, shadowOff:14,
-    speed:1, transMs:800, flatHoldMs:500, l1Hold:2600, l2Hold:2600, l3Hold:2600, settleMs:350,
+    speed:1, transMs:800, fadeMs:600, l1Hold:2600, l2Hold:2600, l3Hold:2600, settleMs:350,
     floatAmp:3, floatPeriod:2400, drift:0.6, stagger:60, transition:'morph', easing:'reference',
   };
 }
@@ -417,6 +417,7 @@ function loadSpec(){
     const o = JSON.parse(raw); if(!o || o.version!==1) return d;
     const s = {...d, ...o, matParams:{...d.matParams, ...(o.matParams||{})}};
     if(o.diameter===132) s.diameter = d.diameter;   // v0.1 default → new default (70%)
+    delete s.flatRatio; delete s.flatThick; delete s.flatHoldMs;
     if(!Array.isArray(s.stops) || !s.stops.length || s.stops.length>3) s.stops = d.stops;
     if(!MATS[s.material]) s.material = d.material;
     if(!EASINGS[s.easing]) s.easing = d.easing;
@@ -466,62 +467,89 @@ function stopUniforms(){
    3. Poses + timeline  (mirrored 1:1 in the generated Kotlin)
    ====================================================================== */
 const SCREEN = { w:360, h:780 };
-const TOP_INSET = 40, BOTTOM_INSET = 88;
-function makePoses(s, W, H){
-  const D = s.diameter, ft = s.flatThick;
+const TOP_INSET = 40, BOTTOM_INSET = 88, APP_SLOT_TOP = 326, INSERT_GAP = 16;
+const FADE = cubicBezier(0.4, 0, 0.2, 1);   // = Compose FastOutSlowInEasing
+// cardTop < 0: card settles above the bottom inset (standalone). cardTop >= 0: card slots in at that y (in-app insert).
+function makePoses(s, W, H, cardTop){
+  const D = s.diameter;
   const P = (cx,cy,hx,hy,r,elev,bevel,shadow,fill,scrim)=>({cx,cy,hx,hy,r,elev,bevel,shadow,fill,scrim});
+  const cy = cardTop >= 0 ? cardTop + s.cardH/2 : H - BOTTOM_INSET - s.cardH/2;
   return [
-    P(W/2, TOP_INSET+ft/2, D*s.flatRatio/2, ft/2, ft/2, 0, ft/2, 0, 1, 0),                               // 0 flat
-    P(W/2, TOP_INSET+12+D/2, D/2, D/2, D/2, 1, D/2, 1, 1, 0.06),                                         // 1 sphere (L1)
-    P(W/2, H-BOTTOM_INSET-s.cardH/2, W/2-s.margin, s.cardH/2, s.cardCorner, 0.3, s.cardThick, 0.18, 1, 0.14), // 2 card (L2)
-    P(W/2, H/2, W/2, H/2, 28, 0.12, 40, 0, 0, 0.3),                                                      // 3 full (L3)
+    P(W/2, TOP_INSET+12+D/2, D/2, D/2, D/2, 1, D/2, 1, 1, 0),                                 // 0 sphere (L1)
+    P(W/2, cy, W/2-s.margin, s.cardH/2, s.cardCorner, 0.3, s.cardThick, 0.18, 1, 0),          // 1 card (L2)
+    P(W/2, H/2, W/2, H/2, 28, 0.12, 40, 0, 0, 0.06),                                          // 2 full (L3)
   ];
 }
 function buildTimeline(s){
   const T = s.transMs;
   const segs = [
-    {hold:true,  a:0,     dur:s.flatHoldMs, lv:1, name:'나타남', appear:true},
-    {hold:false, a:0,b:1, dur:T,            lv:1, name:'떠오름'},
-    {hold:true,  a:1,     dur:s.l1Hold,     lv:1, name:'부유', floating:true},
-    {hold:false, a:1,b:2, dur:T+s.settleMs, lv:2, name:'확산·안착'},
-    {hold:true,  a:2,     dur:s.l2Hold,     lv:2, name:'컴포넌트 생성', comps:true},
-    {hold:false, a:2,b:3, dur:T,            lv:3, name:'전체 확산'},
-    {hold:true,  a:3,     dur:s.l3Hold,     lv:3, name:'전체 화면', breathe:true},
-    {hold:false, a:3,b:0, dur:T,            lv:1, name:'수축·사라짐', vanish:true},
+    {hold:true,  a:0,     dur:s.fadeMs,     lv:1, name:'나타남', appear:true},
+    {hold:true,  a:0,     dur:s.l1Hold,     lv:1, name:'부유', floating:true},
+    {hold:false, a:0,b:1, dur:T+s.settleMs, lv:2, name:'확산·끼어들기'},
+    {hold:true,  a:1,     dur:s.l2Hold,     lv:2, name:'컴포넌트 생성', comps:true},
+    {hold:false, a:1,b:2, dur:T,            lv:3, name:'전체 확산', keep:true},
+    {hold:true,  a:2,     dur:s.l3Hold,     lv:3, name:'전체 화면 리스트', breathe:true, keep:true},
+    {hold:true,  a:2,     dur:s.fadeMs,     lv:3, name:'사라짐', vanish:true, keep:true},
   ];
   let t=0; for(const g of segs){ g.t0=t; t+=g.dur; }
-  return { segs, len:t };
+  return { segs, len:Math.max(t,1) };
 }
 function interpPose(A,B,t,ez){
   const e=ez(clamp01(t)), ex=ez(clamp01(t*1.15)), ey=ez(clamp01((t-0.12)/0.88)), es=ez(clamp01((t-0.15)/0.85));
   return { cx:lerp(A.cx,B.cx,e), cy:lerp(A.cy,B.cy,e), hx:lerp(A.hx,B.hx,ex), hy:lerp(A.hy,B.hy,ey), r:lerp(A.r,B.r,e),
            elev:lerp(A.elev,B.elev,e), bevel:lerp(A.bevel,B.bevel,e), shadow:lerp(A.shadow,B.shadow,es), fill:lerp(A.fill,B.fill,e), scrim:lerp(A.scrim,B.scrim,e) };
 }
-function sampleFrame(tMs){
+// List rows: 3 rows inside the settled card (L2) re-flow into a 5-row full-screen list as the cue goes full screen (L3).
+function layoutItems(card, pose, comps, opacity, W){
+  const pad=16, gap=10, rowH=(card.hy*2-pad*2-gap*2)/3, rowW=card.hx*2-pad*2;
+  const k = 1 - pose.fill;
+  const fx=28, fTop=72, fH=84, fGap=14, fW=W-fx*2;
+  const out=[];
+  for(let i=0;i<5;i++){
+    const ki = FADE(clamp01((k - i*0.05)/0.8));
+    const fy = fTop + i*(fH+fGap);
+    if(i<3){
+      const cy = card.cy-card.hy+pad+i*(rowH+gap)+(1-comps[i])*10;
+      out.push({ x:lerp(card.cx-card.hx+pad,fx,ki), y:lerp(cy,fy,ki), w:lerp(rowW,fW,ki), h:lerp(rowH,fH,ki), a:comps[i]*opacity, sf:ki });
+    } else {
+      out.push({ x:fx, y:fy+(1-ki)*12, w:fW, h:fH, a:clamp01((k-0.5-(i-3)*0.12)/0.3)*opacity, sf:ki });
+    }
+  }
+  return out;
+}
+function sampleFrame(tMs, P){
   const L = TL.len, t = ((tMs % L) + L) % L;
   let g = TL.segs[0]; for(const s of TL.segs) if(s.t0<=t) g=s;
-  const local = t - g.t0, items=[0,0,0];
+  const local = t - g.t0, comps=[0,0,0];
   let glowW=28, phase=0, phaseAmt=0, opacity=1, pose;
-  if(g.appear) opacity = g.dur>0 ? clamp01((local-0.3*g.dur)/(0.7*g.dur)) : 1;
   if(g.hold){
-    const p = POSES[g.a]; pose = {...p};
+    pose = {...P[g.a]};
+    if(g.appear) opacity = g.dur>0 ? FADE(clamp01((local-0.25*g.dur)/(0.75*g.dur))) : 1;
+    if(g.vanish) opacity = 1 - FADE(clamp01(local/Math.max(g.dur,1)));
     if(g.floating){
       const env = clamp01(Math.min(local/400, (g.dur-local)/400));
       const w = Math.sin(2*Math.PI*local/S.floatPeriod);
       pose.cy += w*S.floatAmp*env; pose.shadow *= 1 - 0.15*w*env;
     }
-    if(g.comps) for(let i=0;i<3;i++) items[i] = clamp01((local-120-i*S.stagger)/260) * clamp01((g.dur-local)/220);
-    if(g.breathe) glowW = 28*(1+0.15*Math.sin(2*Math.PI*local/2000));
+    if(g.comps) for(let i=0;i<3;i++) comps[i] = clamp01((local-120-i*S.stagger)/260);
+    if(g.breathe || g.vanish) glowW = 28*(1+0.15*Math.sin(2*Math.PI*(local+(g.vanish?S.l3Hold:0))/2000));
   } else {
     const tl = clamp01(local/g.dur);
-    pose = interpPose(POSES[g.a], POSES[g.b], tl, EASE);
+    pose = interpPose(P[g.a], P[g.b], tl, EASE);
     if(S.transition==='phase'){ phase = 2*Math.PI*EASE(tl); phaseAmt = Math.sin(Math.PI*tl); }
-    if(g.vanish) opacity = 1 - EASE(clamp01((tl-0.35)/0.65));
   }
-  return { pose, level:g.lv, seg:g, items, glowW, phase, phaseAmt, opacity, t };
+  if(g.keep) comps.fill(1);
+  const push = clamp01((1-pose.elev)/0.7) * opacity;   // how far in-app content is pushed down for the inserted card
+  const full = (1-pose.fill) * opacity;                  // how far the screen has become the full-screen list
+  return { pose, level:g.lv, seg:g, items:layoutItems(P[1], pose, comps, opacity, SCREEN.w), glowW, phase, phaseAmt, opacity, push, full, t };
 }
-let EASE, POSES, TL;
-function rebuildMotion(){ EASE = cubicBezier(...EASINGS[S.easing]); POSES = makePoses(S, SCREEN.w, SCREEN.h); TL = buildTimeline(S); }
+let EASE, POSES_A, POSES_B, TL;
+function rebuildMotion(){
+  EASE = cubicBezier(...EASINGS[S.easing]);
+  POSES_A = makePoses(S, SCREEN.w, SCREEN.h, -1);
+  POSES_B = makePoses(S, SCREEN.w, SCREEN.h, APP_SLOT_TOP);
+  TL = buildTimeline(S);
+}
 rebuildMotion();
 
 /* ======================================================================
@@ -768,7 +796,7 @@ function buildUniforms(fr, scale, resW, resH, withScrim, timeS){
   return {
     uRes:[resW,resH], uScale:scale, uCenter:[pose.cx,pose.cy], uHalf:[pose.hx,pose.hy], uRadius:pose.r, uElev:pose.elev, uBevel:pose.bevel,
     uShadow:pose.shadow*S.shadow, uShadowBlur:S.shadowBlur*(0.4+0.6*pose.elev), uShadowOff:S.shadowOff*pose.elev,
-    uFill:pose.fill, uGlowW:fr.glowW, uGlow:S.material==='softGlow'?mp[0]:0.1, uScrim:withScrim?pose.scrim:0,
+    uFill:pose.fill, uGlowW:fr.glowW, uGlow:S.material==='softGlow'?mp[0]:0.1, uScrim:withScrim?pose.scrim*(fr.opacity==null?1:fr.opacity):0,
     uPhase:fr.phase, uPhaseAmt:fr.phaseAmt,
     uHl:[S.hlX+Math.sin(timeS*0.6)*0.10*S.drift, S.hlY+Math.cos(timeS*0.45)*0.07*S.drift], uTime:timeS,
     uP:[mp[0]||0,mp[1]||0,mp[2]||0,mp[3]||0], uC0:su.lab[0], uC1:su.lab[1], uC2:su.lab[2], uPos:su.pos, uStopCount:su.count,
@@ -787,7 +815,8 @@ function drawGridBg(ctx, W, H, s, dark){
   for(let y=16;y<H;y+=16) for(let x=12;x<W;x+=16){ ctx.beginPath(); ctx.arc(x,y,0.9,0,6.2832); ctx.fill(); }
 }
 function rr(ctx,x,y,w,h,r){ ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x,y,w,h,r) : ctx.rect(x,y,w,h); }
-function drawAppBg(ctx, W, H, s, dark){
+function drawAppBg(ctx, W, H, s, dark, push=0, full=0){
+  const sh = push*(S.cardH+INSERT_GAP);   // content below the slot moves down to make room
   const C = dark ? { bg:'#0E0F13', surf:'#191A20', line:'#2A2C35', line2:'#22242C', ink:'#ECEDF2', sub:'#8A8F9E', chip:'#1F2128', thumb:['#2B2F3B','#3B3145','#233540','#3A3528'] }
                  : { bg:'#FFFFFF', surf:'#F3F4F8', line:'#DEE1E8', line2:'#E9EBF0', ink:'#16181E', sub:'#7A7F8C', chip:'#F0F1F5', thumb:['#DCE3F5','#F2DDE8','#D8EEEA','#F1E8D6'] };
   ctx.setTransform(s,0,0,s,0,0);
@@ -810,7 +839,8 @@ function drawAppBg(ctx, W, H, s, dark){
   ctx.fillStyle = C.ink; ctx.font = font(600,15); ctx.fillText('주간 회의 준비', 156, 190);
   ctx.fillStyle = C.sub; ctx.font = font(400,12); ctx.fillText('오후 2:00 · 3층 회의실', 156, 212);
   ctx.fillStyle = C.line; rr(ctx,156,236,150,8,4); ctx.fill(); rr(ctx,156,252,110,8,4); ctx.fill(); rr(ctx,156,268,130,8,4); ctx.fill();
-  // list
+  // list (below the insertion slot)
+  ctx.save(); ctx.translate(0, sh);
   ctx.fillStyle = C.ink; ctx.font = font(600,15); ctx.fillText('최근 항목', 20, 342);
   const titles = ['디자인 리뷰 메모','점심 장소 후보','출장 일정 정리','읽을거리 3개'];
   for(let i=0;i<4;i++){
@@ -821,12 +851,16 @@ function drawAppBg(ctx, W, H, s, dark){
     ctx.fillStyle = C.sub; ctx.font = font(400,11); ctx.fillText(['9:12','어제','어제','월'][i], W-46, y+16);
     if(i<3){ ctx.fillStyle = C.line2; ctx.fillRect(88,y+62,W-108,1); }
   }
+  ctx.restore();
+  ctx.fillStyle = C.bg; ctx.fillRect(0,H-BOTTOM_INSET,W,BOTTOM_INSET);
   // input bar
   rr(ctx,16,H-72,W-32,52,26); ctx.fillStyle = C.surf; ctx.fill();
   ctx.fillStyle = C.sub; ctx.font = font(400,14); ctx.fillText('무엇이든 물어보세요', 36, H-46);
   ctx.fillStyle = C.ink; ctx.beginPath(); ctx.arc(W-46,H-46,18,0,6.2832); ctx.fill();
   ctx.fillStyle = C.bg; ctx.beginPath(); ctx.moveTo(W-46,H-55); ctx.lineTo(W-44,H-48); ctx.lineTo(W-37,H-46); ctx.lineTo(W-44,H-44); ctx.lineTo(W-46,H-37); ctx.lineTo(W-48,H-44); ctx.lineTo(W-55,H-46); ctx.lineTo(W-48,H-48); ctx.closePath(); ctx.fill();
   ctx.fillStyle = C.ink; rr(ctx,W/2-67,H-9,134,5,3); ctx.fill();
+  // full screen: the app recedes so the re-flowed list owns the screen
+  if(full>0){ ctx.globalAlpha = 0.86*full; ctx.fillStyle = C.bg; ctx.fillRect(0,24,W,H-24); ctx.globalAlpha = 1; }
 }
 
 /* ======================================================================
@@ -843,7 +877,7 @@ for(const k of ['A','B']){
   const f = frames[k];
   try{ f.r = new CueRenderer(f.gl); for(const m of MAT_KEYS) f.r.program(m); }
   catch(e){ glError = e; console.error(e); const d=document.createElement('div'); d.className='gl-error'; d.textContent='프리뷰를 그릴 수 없습니다: '+e.message; f.dev.appendChild(d); }
-  f.items = [0,1,2].map(()=>{ const d=document.createElement('div'); d.className='item'; d.style.opacity='0'; f.comp.appendChild(d); return d; });
+  f.items = [0,1,2,3,4].map(()=>{ const d=document.createElement('div'); d.className='item'; d.style.opacity='0'; f.comp.appendChild(d); return d; });
   f.scale = 1;
 }
 const hudA = { tl:$('#hudA [data-k=tl]'), tr:$('#hudA [data-k=tr]'), bl:$('#hudA [data-k=bl]'), br:$('#hudA [data-k=br]') };
@@ -890,9 +924,8 @@ function layout(){
     for(const c of [f.bg, f.gl]){ c.width = pw; c.height = ph; }
     const ctx = f.bg.getContext('2d');
     ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,pw,ph);
-    (f.app ? drawAppBg : drawGridBg)(ctx, SCREEN.w, SCREEN.h, f.scale, dark);
+    if(f.app) drawAppBg(ctx, SCREEN.w, SCREEN.h, f.scale, dark, f.push||0, f.full||0); else drawGridBg(ctx, SCREEN.w, SCREEN.h, f.scale, dark);
     if(f.r) f.r.setBg(f.bg);
-    f.items.forEach(el=>el.style.setProperty('--ic', Math.round(28*f.css)+'px'));
     f.dev.style.setProperty('--hud', dark ? '#7D8292' : '#7A7F8D');
   }
   const fs = Math.max(9, 11*f_css());
@@ -933,7 +966,7 @@ function buildLanes(){
   $('#loopHint').textContent = `루프 ${(TL.len/1000/S.speed).toFixed(2)}s`;
 }
 buildLanes();
-document.querySelectorAll('#levels button').forEach(b=>b.onclick=()=>{ const l=+b.dataset.l; const idx = l===1?1:l===2?3:5; T = TL.segs[idx].t0; });
+document.querySelectorAll('#levels button').forEach(b=>b.onclick=()=>{ const l=+b.dataset.l; const idx = l===1?0:l===2?2:4; T = TL.segs[idx].t0; });
 document.addEventListener('keydown', e=>{
   if(e.target.closest('input,textarea,select,[contenteditable]')) return;
   if($('#view-cue').hidden) return;
@@ -942,31 +975,44 @@ document.addEventListener('keydown', e=>{
 });
 
 let lastSeg = -1, lastLevel = -1;
-function renderFrame(fr){
-  const shown = VIEWS[view].show;
-  for(const k of shown){
-    const f = frames[k]; if(!f.r) continue;
-    f.r.draw(S.material, buildUniforms(fr, f.scale, f.gl.width, f.gl.height, f.app, clockS));
-    // generated list components, positioned in dp
-    const p = fr.pose, pad=16, gap=10, rowH=(p.hy*2-pad*2-gap*2)/3, rowW=p.hx*2-pad*2, c=f.css;
-    f.items.forEach((el,i)=>{
-      const a = fr.items[i];
-      if(a<=0.001 || rowH<8){ if(el.style.opacity!=='0') el.style.opacity='0'; return; }
-      el.style.width = (rowW*c)+'px'; el.style.height = (rowH*c)+'px';
-      el.style.transform = `translate(${(p.cx-p.hx+pad)*c}px, ${(p.cy-p.hy+pad+i*(rowH+gap)+(1-a)*10)*c}px)`;
-      el.style.opacity = a.toFixed(3);
-    });
+const rgba = (c)=>`rgba(${c[0]},${c[1]},${c[2]},${(+c[3]).toFixed(3)})`;
+const mixc = (a,b,t)=>[Math.round(lerp(a[0],b[0],t)),Math.round(lerp(a[1],b[1],t)),Math.round(lerp(a[2],b[2],t)),lerp(a[3],b[3],t)];
+function rowStyles(){
+  const dark = effectiveDark(), acc = hexToRgb(sortedStops()[0].color).map(v=>Math.round(v*255));
+  return {
+    card:{ bg:[255,255,255,0.22], ic:[255,255,255,0.88], b1:[255,255,255,0.88], b2:[255,255,255,0.55] },
+    full: dark ? { bg:[30,32,40,0.86], ic:[...acc,0.95], b1:[235,237,245,0.6], b2:[235,237,245,0.3] }
+               : { bg:[255,255,255,0.86], ic:[...acc,0.95], b1:[22,24,32,0.55], b2:[22,24,32,0.28] },
+  };
+}
+function renderFrame(k, fr){
+  const f = frames[k]; if(!f.r) return;
+  if(f.app && (Math.abs((f.push||0) - fr.push) > 0.0005 || Math.abs((f.full||0) - fr.full) > 0.002)){
+    f.push = fr.push; f.full = fr.full;
+    const ctx = f.bg.getContext('2d'); ctx.setTransform(1,0,0,1,0,0);
+    drawAppBg(ctx, SCREEN.w, SCREEN.h, f.scale, effectiveDark(), f.push, f.full); f.r.setBg(f.bg);
   }
-  if(shown.includes('A')){
-    hudA.bl.textContent = `L${fr.level} / 3`;
-    hudA.br.textContent = fr.seg.name;
-  }
+  f.r.draw(S.material, buildUniforms(fr, f.scale, f.gl.width, f.gl.height, f.app, clockS));
+  const c = f.css, st = rowStyles();
+  f.items.forEach((el,i)=>{
+    const it = fr.items[i];
+    if(it.a<=0.001 || it.h<8){ if(el.style.opacity!=='0') el.style.opacity='0'; return; }
+    el.style.width = (it.w*c)+'px'; el.style.height = (it.h*c)+'px';
+    el.style.transform = `translate(${it.x*c}px, ${it.y*c}px)`;
+    el.style.opacity = it.a.toFixed(3);
+    el.style.setProperty('--ic', Math.round(Math.min(lerp(28,40,it.sf), it.h-12)*c)+'px');
+    el.style.setProperty('--rb', rgba(mixc(st.card.bg, st.full.bg, it.sf)));
+    el.style.setProperty('--ri', rgba(mixc(st.card.ic, st.full.ic, it.sf)));
+    el.style.setProperty('--r1', rgba(mixc(st.card.b1, st.full.b1, it.sf)));
+    el.style.setProperty('--r2', rgba(mixc(st.card.b2, st.full.b2, it.sf)));
+  });
+  if(k==='A'){ hudA.bl.textContent = `L${fr.level} / 3`; hudA.br.textContent = fr.seg.name; }
 }
 function tick(now){
   const dt = Math.min(64, now-last); last = now;
   if(playing){ T = (T + dt*S.speed) % TL.len; clockS += dt*S.speed/1000; }
-  const fr = sampleFrame(T);
-  if(!glError) renderFrame(fr);
+  const fr = sampleFrame(T, POSES_A);
+  if(!glError) for(const k of VIEWS[view].show) renderFrame(k, k==='A' ? fr : sampleFrame(T, POSES_B));
   if(document.activeElement !== scrub) scrub.value = Math.round(T/TL.len*1000);
   tclock.textContent = `${(T/1000/S.speed).toFixed(2)} / ${(TL.len/1000/S.speed).toFixed(2)}s`;
   const si = TL.segs.indexOf(fr.seg);
@@ -1076,8 +1122,8 @@ function paintMat(){
 // size / motion / shadow
 const ctrlSets = [];
 function addSet(host, defs, motion){ defs.forEach(([k,label,unit,min,max,step])=>ctrlSets.push(rangeCtrl($(host),label,unit,min,max,step,()=>S[k],v=>{S[k]=v;changed({motion:true, thumbs:k==='diameter'});}))); }
-addSet('#sizeCtrls', [['diameter','구 지름','dp',64,220,1],['flatRatio','납작 상태 폭','×',0.2,1.2,0.01],['flatThick','납작 상태 두께','dp',2,12,0.5],['cardH','안착 높이','dp',120,360,1],['cardThick','안착 두께','dp',2,40,1],['cardCorner','안착 모서리','dp',0,48,1],['margin','좌우 여백','dp',0,40,1]]);
-addSet('#motionCtrls', [['speed','재생 속도','×',0.25,2,0.05],['transMs','전환 시간','ms',300,1600,10],['l1Hold','L1 유지','ms',500,6000,50],['l2Hold','L2 유지','ms',500,6000,50],['l3Hold','L3 유지','ms',500,6000,50],['flatHoldMs','대기(납작) 유지','ms',0,3000,50],['floatAmp','부유 진폭','dp',0,10,0.5],['floatPeriod','부유 주기','ms',800,5000,50],['drift','하이라이트 흔들림','',0,1,0.01],['stagger','컴포넌트 간격','ms',0,200,5]]);
+addSet('#sizeCtrls', [['diameter','구 지름','dp',64,220,1],['cardH','안착 높이','dp',120,360,1],['cardThick','안착 두께','dp',2,40,1],['cardCorner','안착 모서리','dp',0,48,1],['margin','좌우 여백','dp',0,40,1]]);
+addSet('#motionCtrls', [['speed','재생 속도','×',0.25,2,0.05],['transMs','전환 시간','ms',300,1600,10],['l1Hold','L1 유지','ms',500,6000,50],['l2Hold','L2 유지','ms',500,6000,50],['l3Hold','L3 유지','ms',500,6000,50],['fadeMs','나타남·사라짐','ms',150,2000,10],['floatAmp','부유 진폭','dp',0,10,0.5],['floatPeriod','부유 주기','ms',800,5000,50],['drift','하이라이트 흔들림','',0,1,0.01],['stagger','컴포넌트 간격','ms',0,200,5]]);
 addSet('#shadowCtrls', [['shadow','그림자 강도','',0,1,0.01],['shadowBlur','그림자 번짐','dp',2,40,1],['shadowOff','그림자 거리','dp',0,32,1]]);
 const paintTrans = segCtrl($('#transStyle'), ()=>S.transition, v=>{ S.transition=v; changed({motion:true}); });
 const paintEase = segCtrl($('#easing'), ()=>S.easing, v=>{ S.easing=v; $('#easeOut').textContent = EASINGS[v].join(', '); changed({motion:true}); });
@@ -1127,8 +1173,10 @@ function genKotlin(){
 // API 26–32 falls back to Brush gradients. No extra dependencies (Compose BOM only).
 //
 // Usage:
-//   AiVisualCueDemoLoop()                       // same infinite L1→L2→L3 loop as the tool
+//   AiVisualCueDemoLoop()                       // same infinite loop as the tool
 //   AiVisualCue(level = CueLevel.L2)            // drive it from your own state
+//   Both take an \`underlay\` slot: draw your screen there and push content down by \`insert\`
+//   so the L2 card slides in between your items (set spec.cardTop to the slot's top).
 // ─────────────────────────────────────────────────────────────────────────────
 package com.example.aivisualcue
 
@@ -1139,10 +1187,12 @@ import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
@@ -1170,8 +1220,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ShaderBrush
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.max
@@ -1197,14 +1250,14 @@ ${st.map(s=>`        CueStop(${kargb(s.color)}, ${kf(s.pos)}),${s.name?` // ${s.
     val glow: Float = ${kf(glowV)},
     val edgeSoftness: Float = ${kf(edgeV)},
     val sphereDiameter: Float = ${kf(S.diameter)},
-    val flatWidthRatio: Float = ${kf(S.flatRatio)},
-    val flatThickness: Float = ${kf(S.flatThick)},
     val cardHeight: Float = ${kf(S.cardH)},
     val cardThickness: Float = ${kf(S.cardThick)},
     val cardCorner: Float = ${kf(S.cardCorner)},
     val margin: Float = ${kf(S.margin)},
     val topInset: Float = ${kf(TOP_INSET)},
     val bottomInset: Float = ${kf(BOTTOM_INSET)},
+    val cardTop: Float = -1f,              // < 0: card settles above bottomInset. >= 0: card slots in at this y (dp)
+    val insertGap: Float = ${kf(INSERT_GAP)},
     val shadowStrength: Float = ${kf(S.shadow)},
     val shadowBlur: Float = ${kf(S.shadowBlur)},
     val shadowOffset: Float = ${kf(S.shadowOff)},
@@ -1212,7 +1265,7 @@ ${st.map(s=>`        CueStop(${kargb(s.color)}, ${kf(s.pos)}),${s.name?` // ${s.
     val floatPeriodMs: Float = ${dur(S.floatPeriod)},
     val transitionMs: Float = ${dur(S.transMs)},
     val settleMs: Float = ${dur(S.settleMs)},
-    val flatHoldMs: Float = ${dur(S.flatHoldMs)},
+    val fadeMs: Float = ${dur(S.fadeMs)},
     val l1HoldMs: Float = ${dur(S.l1Hold)},
     val l2HoldMs: Float = ${dur(S.l2Hold)},
     val l3HoldMs: Float = ${dur(S.l3Hold)},
@@ -1226,29 +1279,37 @@ enum class CueLevel { Idle, L1, L2, L3 }
 
 // ───────────────────────────── Public composables ─────────────────────────────
 
-/** Plays Idle → L1 → L2 → L3 → Idle forever, exactly like the tool preview. */
+/**
+ * Plays the tool's loop forever: fade in → L1 float → L2 card slots in + list → L3 full-screen list → fade out.
+ * [underlay] draws your screen under the cue. Push the content below the slot down by \`insert\`,
+ * \`fullscreen\` (0..1) tells how far the cue has spread to full screen. Fade your content by it.
+ */
 @Composable
 fun AiVisualCueDemoLoop(
     modifier: Modifier = Modifier.fillMaxSize(),
     spec: AiVisualCueSpec = AiVisualCueSpec(),
     background: Shader? = null,
+    underlay: @Composable (insert: Dp, fullscreen: Float) -> Unit = { _, _ -> },
 ) {
     val timeMs by rememberCueTimeMs()
     BoxWithConstraints(modifier) {
         val w = maxWidth.value
         val h = maxHeight.value
         val timeline = remember(spec, w, h) { CueTimeline(spec, w, h) }
-        CueLayer(spec, timeline.sample(timeMs), timeMs, background)
+        val frame = timeline.sample(timeMs)
+        underlay((frame.push * (spec.cardHeight + spec.insertGap)).dp, (1f - frame.pose.fill) * frame.opacity)
+        CueLayer(spec, frame, timeMs, background)
     }
 }
 
-/** Shows one level and animates to a new one whenever [level] changes. */
+/** Shows one level and animates whenever [level] changes. [CueLevel.Idle] fades the cue out. */
 @Composable
 fun AiVisualCue(
     level: CueLevel,
     modifier: Modifier = Modifier.fillMaxSize(),
     spec: AiVisualCueSpec = AiVisualCueSpec(),
     background: Shader? = null,
+    underlay: @Composable (insert: Dp, fullscreen: Float) -> Unit = { _, _ -> },
 ) {
     val timeMs by rememberCueTimeMs()
     val now by rememberUpdatedState(timeMs)
@@ -1256,17 +1317,31 @@ fun AiVisualCue(
         val w = maxWidth.value
         val h = maxHeight.value
         val poses = remember(spec, w, h) { CuePoses(spec, w, h) }
-        val target = poses.forLevel(level)
-        var from by remember(poses) { mutableStateOf(target) }
-        var to by remember(poses) { mutableStateOf(target) }
+        val initial = poses.forLevel(level) ?: poses.sphere
+        var from by remember(poses) { mutableStateOf(initial) }
+        var to by remember(poses) { mutableStateOf(initial) }
         var settledAt by remember { mutableFloatStateOf(0f) }
         val progress = remember { Animatable(1f) }
-        LaunchedEffect(target) {
+        val opacity = remember { Animatable(if (level == CueLevel.Idle) 0f else 1f) }
+        LaunchedEffect(level, poses) {
+            val fade = tween<Float>(spec.fadeMs.toInt(), easing = FastOutSlowInEasing)
+            val target = poses.forLevel(level)
+            if (target == null) {                       // Idle: fade out in place
+                opacity.animateTo(0f, fade)
+                return@LaunchedEffect
+            }
+            if (opacity.value < 0.01f) {                // invisible: jump to the new shape, then fade in
+                from = target
+                to = target
+                progress.snapTo(1f)
+                settledAt = now
+            }
+            launch { opacity.animateTo(1f, fade) }
             if (target !== to) {
                 from = interpPose(from, to, progress.value, spec.easing)
                 to = target
                 progress.snapTo(0f)
-                val d = spec.transitionMs + if (level == CueLevel.L2) spec.settleMs else 0f
+                val d = spec.transitionMs + if (target === poses.card) spec.settleMs else 0f
                 progress.animateTo(1f, tween(d.toInt(), easing = LinearEasing))
                 settledAt = now
             }
@@ -1274,20 +1349,30 @@ fun AiVisualCue(
         val tl = progress.value
         var pose = interpPose(from, to, tl, spec.easing)
         val since = timeMs - settledAt
-        if (level == CueLevel.L1 && tl >= 1f) {
+        if (to === poses.sphere && tl >= 1f) {
             val wave = sin(2f * PI.toFloat() * since / spec.floatPeriodMs)
             val env = clamp01(since / 400f)
             pose = pose.copy(cy = pose.cy + wave * spec.floatAmplitude * env, shadow = pose.shadow * (1f - 0.15f * wave * env))
         }
-        val items = FloatArray(3)
-        if (level == CueLevel.L2 && tl >= 1f) {
-            for (i in 0 until 3) items[i] = clamp01((since - 120f - i * spec.componentStaggerMs) / 260f)
+        val comps = FloatArray(3)
+        if (to !== poses.sphere) {
+            for (i in 0 until 3) {
+                comps[i] = when {
+                    to === poses.full -> 1f
+                    tl >= 1f -> clamp01((since - 120f - i * spec.componentStaggerMs) / 260f)
+                    else -> 0f
+                }
+            }
         }
-        val glowW = if (level == CueLevel.L3) 28f * (1f + 0.15f * sin(2f * PI.toFloat() * timeMs / 2000f)) else 28f
+        val glowW = 28f * (1f + 0.15f * sin(2f * PI.toFloat() * timeMs / 2000f))
         val inTransition = spec.phaseTransition && tl < 1f
         val phase = if (inTransition) 2f * PI.toFloat() * spec.easing.transform(tl) else 0f
         val phaseAmt = if (inTransition) sin(PI.toFloat() * tl) else 0f
-        CueLayer(spec, CueFrame(pose, phase, phaseAmt, glowW, items), timeMs, background)
+        val o = opacity.value
+        val push = clamp01((1f - pose.elev) / 0.7f) * o
+        val frame = CueFrame(pose, phase, phaseAmt, glowW, cueItems(poses.card, pose, comps, o, w), o, push)
+        underlay((push * (spec.cardHeight + spec.insertGap)).dp, (1f - pose.fill) * o)
+        CueLayer(spec, frame, timeMs, background)
     }
 }
 
@@ -1298,8 +1383,12 @@ private data class CuePose(
     val elev: Float, val bevel: Float, val shadow: Float, val fill: Float, val scrim: Float,
 )
 
+/** One list row in dp. [sf] = 0 card style … 1 full-screen style. */
+private class CueItem(val x: Float, val y: Float, val w: Float, val h: Float, val a: Float, val sf: Float)
+
 private class CueFrame(
-    val pose: CuePose, val phase: Float, val phaseAmt: Float, val glowW: Float, val items: FloatArray, val opacity: Float = 1f,
+    val pose: CuePose, val phase: Float, val phaseAmt: Float, val glowW: Float,
+    val items: List<CueItem>, val opacity: Float, val push: Float,
 )
 
 private fun mixf(a: Float, b: Float, t: Float) = a + (b - a) * t
@@ -1316,17 +1405,39 @@ private fun interpPose(a: CuePose, b: CuePose, t: Float, ease: CubicBezierEasing
     )
 }
 
+/** 3 rows inside the settled card re-flow into a 5-row full-screen list as the cue spreads (1 - fill). */
+private fun cueItems(card: CuePose, pose: CuePose, comps: FloatArray, opacity: Float, screenW: Float): List<CueItem> {
+    val pad = 16f
+    val gap = 10f
+    val rowH = (card.hy * 2f - pad * 2f - gap * 2f) / 3f
+    val rowW = card.hx * 2f - pad * 2f
+    val k = 1f - pose.fill
+    val fx = 28f
+    val fTop = 72f
+    val fH = 84f
+    val fGap = 14f
+    val fW = screenW - fx * 2f
+    return List(5) { i ->
+        val ki = FastOutSlowInEasing.transform(clamp01((k - i * 0.05f) / 0.8f))
+        val fy = fTop + i * (fH + fGap)
+        if (i < 3) {
+            val cy = card.cy - card.hy + pad + i * (rowH + gap) + (1f - comps[i]) * 10f
+            CueItem(mixf(card.cx - card.hx + pad, fx, ki), mixf(cy, fy, ki), mixf(rowW, fW, ki), mixf(rowH, fH, ki), comps[i] * opacity, ki)
+        } else {
+            CueItem(fx, fy + (1f - ki) * 12f, fW, fH, clamp01((k - 0.5f - (i - 3) * 0.12f) / 0.3f) * opacity, ki)
+        }
+    }
+}
+
 private class CuePoses(s: AiVisualCueSpec, w: Float, h: Float) {
-    val flat = CuePose(w / 2f, s.topInset + s.flatThickness / 2f, s.sphereDiameter * s.flatWidthRatio / 2f, s.flatThickness / 2f,
-        s.flatThickness / 2f, 0f, s.flatThickness / 2f, 0f, 1f, 0f)
     val sphere = CuePose(w / 2f, s.topInset + 12f + s.sphereDiameter / 2f, s.sphereDiameter / 2f, s.sphereDiameter / 2f,
-        s.sphereDiameter / 2f, 1f, s.sphereDiameter / 2f, 1f, 1f, 0.06f)
-    val card = CuePose(w / 2f, h - s.bottomInset - s.cardHeight / 2f, w / 2f - s.margin, s.cardHeight / 2f,
-        s.cardCorner, 0.3f, s.cardThickness, 0.18f, 1f, 0.14f)
-    val full = CuePose(w / 2f, h / 2f, w / 2f, h / 2f, 28f, 0.12f, 40f, 0f, 0f, 0.3f)
-    val all = listOf(flat, sphere, card, full)
-    fun forLevel(l: CueLevel) = when (l) {
-        CueLevel.Idle -> flat
+        s.sphereDiameter / 2f, 1f, s.sphereDiameter / 2f, 1f, 1f, 0f)
+    val card = CuePose(w / 2f, if (s.cardTop >= 0f) s.cardTop + s.cardHeight / 2f else h - s.bottomInset - s.cardHeight / 2f,
+        w / 2f - s.margin, s.cardHeight / 2f, s.cardCorner, 0.3f, s.cardThickness, 0.18f, 1f, 0f)
+    val full = CuePose(w / 2f, h / 2f, w / 2f, h / 2f, 28f, 0.12f, 40f, 0f, 0f, 0.06f)
+    val all = listOf(sphere, card, full)
+    fun forLevel(l: CueLevel): CuePose? = when (l) {
+        CueLevel.Idle -> null
         CueLevel.L1 -> sphere
         CueLevel.L2 -> card
         CueLevel.L3 -> full
@@ -1336,20 +1447,19 @@ private class CuePoses(s: AiVisualCueSpec, w: Float, h: Float) {
 private class CueSegment(
     val hold: Boolean, val a: Int, val b: Int, val dur: Float,
     val floating: Boolean = false, val comps: Boolean = false, val breathe: Boolean = false,
-    val appear: Boolean = false, val vanish: Boolean = false,
+    val appear: Boolean = false, val vanish: Boolean = false, val keep: Boolean = false,
 ) { var t0 = 0f }
 
-private class CueTimeline(private val s: AiVisualCueSpec, w: Float, h: Float) {
+private class CueTimeline(private val s: AiVisualCueSpec, private val w: Float, h: Float) {
     private val poses = CuePoses(s, w, h).all
     private val segs = listOf(
-        CueSegment(true, 0, 0, s.flatHoldMs, appear = true),                  // Idle (flat), fades in
-        CueSegment(false, 0, 1, s.transitionMs),                              // L1 rise
-        CueSegment(true, 1, 1, s.l1HoldMs, floating = true),                  // L1 float
-        CueSegment(false, 1, 2, s.transitionMs + s.settleMs),                 // L2 spread + settle
-        CueSegment(true, 2, 2, s.l2HoldMs, comps = true),                     // L2 list items
-        CueSegment(false, 2, 3, s.transitionMs),                              // L3 expand
-        CueSegment(true, 3, 3, s.l3HoldMs, breathe = true),                   // L3 edge glow
-        CueSegment(false, 3, 0, s.transitionMs, vanish = true),               // shrink to top and vanish
+        CueSegment(true, 0, 0, s.fadeMs, appear = true),                          // fade in
+        CueSegment(true, 0, 0, s.l1HoldMs, floating = true),                      // L1 float
+        CueSegment(false, 0, 1, s.transitionMs + s.settleMs),                     // L2 spread + slot in
+        CueSegment(true, 1, 1, s.l2HoldMs, comps = true),                         // L2 list rows
+        CueSegment(false, 1, 2, s.transitionMs, keep = true),                     // L3 spread to full screen
+        CueSegment(true, 2, 2, s.l3HoldMs, breathe = true, keep = true),          // L3 full-screen list
+        CueSegment(true, 2, 2, s.fadeMs, vanish = true, keep = true),             // fade out
     )
     val loopMs: Float
 
@@ -1363,26 +1473,27 @@ private class CueTimeline(private val s: AiVisualCueSpec, w: Float, h: Float) {
         val t = ((tMs % loopMs) + loopMs) % loopMs
         val g = segs.lastOrNull { it.t0 <= t } ?: segs.first()
         val local = t - g.t0
-        val items = FloatArray(3)
+        val comps = FloatArray(3)
         var glowW = 28f
         var phase = 0f
         var phaseAmt = 0f
         var opacity = 1f
-        if (g.appear) opacity = if (g.dur > 0f) clamp01((local - 0.3f * g.dur) / (0.7f * g.dur)) else 1f
         val pose: CuePose
         if (g.hold) {
             var p = poses[g.a]
+            if (g.appear) opacity = if (g.dur > 0f) FastOutSlowInEasing.transform(clamp01((local - 0.25f * g.dur) / (0.75f * g.dur))) else 1f
+            if (g.vanish) opacity = 1f - FastOutSlowInEasing.transform(clamp01(local / max(g.dur, 1f)))
             if (g.floating) {
                 val env = clamp01(min(local / 400f, (g.dur - local) / 400f))
                 val wave = sin(2f * PI.toFloat() * local / s.floatPeriodMs)
                 p = p.copy(cy = p.cy + wave * s.floatAmplitude * env, shadow = p.shadow * (1f - 0.15f * wave * env))
             }
             if (g.comps) {
-                for (i in 0 until 3) {
-                    items[i] = clamp01((local - 120f - i * s.componentStaggerMs) / 260f) * clamp01((g.dur - local) / 220f)
-                }
+                for (i in 0 until 3) comps[i] = clamp01((local - 120f - i * s.componentStaggerMs) / 260f)
             }
-            if (g.breathe) glowW = 28f * (1f + 0.15f * sin(2f * PI.toFloat() * local / 2000f))
+            if (g.breathe || g.vanish) {
+                glowW = 28f * (1f + 0.15f * sin(2f * PI.toFloat() * (local + if (g.vanish) s.l3HoldMs else 0f) / 2000f))
+            }
             pose = p
         } else {
             val tl = clamp01(local / g.dur)
@@ -1391,9 +1502,10 @@ private class CueTimeline(private val s: AiVisualCueSpec, w: Float, h: Float) {
                 phase = 2f * PI.toFloat() * s.easing.transform(tl)
                 phaseAmt = sin(PI.toFloat() * tl)
             }
-            if (g.vanish) opacity = 1f - s.easing.transform(clamp01((tl - 0.35f) / 0.65f))
         }
-        return CueFrame(pose, phase, phaseAmt, glowW, items, opacity)
+        if (g.keep) comps.fill(1f)
+        val push = clamp01((1f - pose.elev) / 0.7f) * opacity
+        return CueFrame(pose, phase, phaseAmt, glowW, cueItems(poses[1], pose, comps, opacity, w), opacity, push)
     }
 }
 
@@ -1412,13 +1524,15 @@ private fun rememberCueTimeMs(): State<Float> = produceState(0f) {
 
 @Composable
 private fun CueLayer(spec: AiVisualCueSpec, frame: CueFrame, timeMs: Float, background: Shader?) {
+    val dark = isSystemInDarkTheme()
+    val accent = remember(spec.stops) { Color(spec.stops.minByOrNull { it.position }?.argb ?: 0xFF3A77FF) }
     Box(Modifier.fillMaxSize()) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             ShaderCue(spec, frame, timeMs, background)
         } else {
             FallbackCue(spec, frame)
         }
-        CueComponents(frame)
+        CueComponents(frame, accent, dark)
     }
 }
 
@@ -1459,7 +1573,7 @@ private fun ShaderCue(spec: AiVisualCueSpec, frame: CueFrame, timeMs: Float, bac
         shader.setFloatUniform("uFill", p.fill)
         shader.setFloatUniform("uGlowW", frame.glowW)
         shader.setFloatUniform("uGlow", spec.glow)
-        shader.setFloatUniform("uScrim", if (spec.scrim) p.scrim else 0f)
+        shader.setFloatUniform("uScrim", if (spec.scrim) p.scrim * frame.opacity else 0f)
         shader.setFloatUniform("uPhase", frame.phase)
         shader.setFloatUniform("uPhaseAmt", frame.phaseAmt)
         shader.setFloatUniform(
@@ -1493,7 +1607,7 @@ private fun FallbackCue(spec: AiVisualCueSpec, frame: CueFrame) {
     Canvas(Modifier.fillMaxSize()) {
         val p = frame.pose
         val d = density
-        if (spec.scrim) drawRect(Color.Black.copy(alpha = p.scrim))
+        if (spec.scrim) drawRect(Color.Black.copy(alpha = p.scrim * frame.opacity))
         val hx = max(p.hx, 0.5f)
         val hy = max(p.hy, 0.5f)
         val r = min(p.r, min(hx, hy)) * d
@@ -1536,31 +1650,28 @@ private fun FallbackCue(spec: AiVisualCueSpec, frame: CueFrame) {
     }
 }
 
-/** The list that appears where the cue settles (L2). Replace with your own content. */
+/** The list that appears where the cue settles (L2) and re-flows to full screen (L3). Replace with your own content. */
 @Composable
-private fun CueComponents(frame: CueFrame) {
-    val p = frame.pose
-    val pad = 16f
-    val gap = 10f
-    val rowH = (p.hy * 2f - pad * 2f - gap * 2f) / 3f
-    val rowW = p.hx * 2f - pad * 2f
-    if (rowH <= 8f || rowW <= 40f) return
-    for (i in 0 until 3) {
-        val a = frame.items[i]
-        if (a <= 0.001f) continue
-        val x = p.cx - p.hx + pad
-        val y = p.cy - p.hy + pad + i * (rowH + gap) + (1f - a) * 10f
-        val icon = min(28f, rowH - 12f)
+private fun CueComponents(frame: CueFrame, accent: Color, dark: Boolean) {
+    val cardBg = Color.White.copy(alpha = 0.22f)
+    val cardBar = Color.White.copy(alpha = 0.88f)
+    val cardBar2 = Color.White.copy(alpha = 0.55f)
+    val fullBg = if (dark) Color(0xDB1E2028) else Color(0xDBFFFFFF)
+    val fullBar = if (dark) Color(0x99EBEDF5) else Color(0x8C161820)
+    val fullBar2 = if (dark) Color(0x4DEBEDF5) else Color(0x47161820)
+    for (item in frame.items) {
+        if (item.a <= 0.001f || item.h < 8f) continue
+        val icon = min(mixf(28f, 40f, item.sf), item.h - 12f)
         Box(
             Modifier
-                .offset(x.dp, y.dp)
-                .size(rowW.dp, rowH.dp)
-                .graphicsLayer { alpha = a }
-                .background(Color.White.copy(alpha = 0.22f), RoundedCornerShape(14.dp)),
+                .offset(item.x.dp, item.y.dp)
+                .size(item.w.dp, item.h.dp)
+                .graphicsLayer { alpha = item.a }
+                .background(lerp(cardBg, fullBg, item.sf), RoundedCornerShape(14.dp)),
         ) {
-            Box(Modifier.offset(12.dp, ((rowH - icon) / 2f).dp).size(icon.dp).background(Color.White.copy(alpha = 0.88f), CircleShape))
-            Box(Modifier.offset((24f + icon).dp, (rowH / 2f - 10f).dp).size((rowW * 0.45f).dp, 7.dp).background(Color.White.copy(alpha = 0.88f), RoundedCornerShape(4.dp)))
-            Box(Modifier.offset((24f + icon).dp, (rowH / 2f + 3f).dp).size((rowW * 0.28f).dp, 6.dp).background(Color.White.copy(alpha = 0.55f), RoundedCornerShape(3.dp)))
+            Box(Modifier.offset(12.dp, ((item.h - icon) / 2f).dp).size(icon.dp).background(lerp(cardBar, accent.copy(alpha = 0.95f), item.sf), CircleShape))
+            Box(Modifier.offset((24f + icon).dp, (item.h / 2f - 10f).dp).size((item.w * 0.45f).dp, 7.dp).background(lerp(cardBar, fullBar, item.sf), RoundedCornerShape(4.dp)))
+            Box(Modifier.offset((24f + icon).dp, (item.h / 2f + 3f).dp).size((item.w * 0.28f).dp, 6.dp).background(lerp(cardBar2, fullBar2, item.sf), RoundedCornerShape(3.dp)))
         }
     }
 }

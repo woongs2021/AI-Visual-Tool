@@ -5,8 +5,10 @@
 // API 26–32 falls back to Brush gradients. No extra dependencies (Compose BOM only).
 //
 // Usage:
-//   AiVisualCueDemoLoop()                       // same infinite L1→L2→L3 loop as the tool
+//   AiVisualCueDemoLoop()                       // same infinite loop as the tool
 //   AiVisualCue(level = CueLevel.L2)            // drive it from your own state
+//   Both take an `underlay` slot: draw your screen there and push content down by `insert`
+//   so the L2 card slides in between your items (set spec.cardTop to the slot's top).
 // ─────────────────────────────────────────────────────────────────────────────
 package com.example.aivisualcue
 
@@ -17,10 +19,12 @@ import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
@@ -48,8 +52,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ShaderBrush
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.max
@@ -77,14 +84,14 @@ data class AiVisualCueSpec(
     val glow: Float = 0.35f,
     val edgeSoftness: Float = 0.8f,
     val sphereDiameter: Float = 92f,
-    val flatWidthRatio: Float = 0.6f,
-    val flatThickness: Float = 4f,
     val cardHeight: Float = 220f,
     val cardThickness: Float = 8f,
     val cardCorner: Float = 28f,
     val margin: Float = 16f,
     val topInset: Float = 40f,
     val bottomInset: Float = 88f,
+    val cardTop: Float = -1f,              // < 0: card settles above bottomInset. >= 0: card slots in at this y (dp)
+    val insertGap: Float = 16f,
     val shadowStrength: Float = 0.6f,
     val shadowBlur: Float = 18f,
     val shadowOffset: Float = 14f,
@@ -92,7 +99,7 @@ data class AiVisualCueSpec(
     val floatPeriodMs: Float = 2400f,
     val transitionMs: Float = 800f,
     val settleMs: Float = 350f,
-    val flatHoldMs: Float = 500f,
+    val fadeMs: Float = 600f,
     val l1HoldMs: Float = 2600f,
     val l2HoldMs: Float = 2600f,
     val l3HoldMs: Float = 2600f,
@@ -106,29 +113,37 @@ enum class CueLevel { Idle, L1, L2, L3 }
 
 // ───────────────────────────── Public composables ─────────────────────────────
 
-/** Plays Idle → L1 → L2 → L3 → Idle forever, exactly like the tool preview. */
+/**
+ * Plays the tool's loop forever: fade in → L1 float → L2 card slots in + list → L3 full-screen list → fade out.
+ * [underlay] draws your screen under the cue. Push the content below the slot down by `insert`,
+ * `fullscreen` (0..1) tells how far the cue has spread to full screen. Fade your content by it.
+ */
 @Composable
 fun AiVisualCueDemoLoop(
     modifier: Modifier = Modifier.fillMaxSize(),
     spec: AiVisualCueSpec = AiVisualCueSpec(),
     background: Shader? = null,
+    underlay: @Composable (insert: Dp, fullscreen: Float) -> Unit = { _, _ -> },
 ) {
     val timeMs by rememberCueTimeMs()
     BoxWithConstraints(modifier) {
         val w = maxWidth.value
         val h = maxHeight.value
         val timeline = remember(spec, w, h) { CueTimeline(spec, w, h) }
-        CueLayer(spec, timeline.sample(timeMs), timeMs, background)
+        val frame = timeline.sample(timeMs)
+        underlay((frame.push * (spec.cardHeight + spec.insertGap)).dp, (1f - frame.pose.fill) * frame.opacity)
+        CueLayer(spec, frame, timeMs, background)
     }
 }
 
-/** Shows one level and animates to a new one whenever [level] changes. */
+/** Shows one level and animates whenever [level] changes. [CueLevel.Idle] fades the cue out. */
 @Composable
 fun AiVisualCue(
     level: CueLevel,
     modifier: Modifier = Modifier.fillMaxSize(),
     spec: AiVisualCueSpec = AiVisualCueSpec(),
     background: Shader? = null,
+    underlay: @Composable (insert: Dp, fullscreen: Float) -> Unit = { _, _ -> },
 ) {
     val timeMs by rememberCueTimeMs()
     val now by rememberUpdatedState(timeMs)
@@ -136,17 +151,31 @@ fun AiVisualCue(
         val w = maxWidth.value
         val h = maxHeight.value
         val poses = remember(spec, w, h) { CuePoses(spec, w, h) }
-        val target = poses.forLevel(level)
-        var from by remember(poses) { mutableStateOf(target) }
-        var to by remember(poses) { mutableStateOf(target) }
+        val initial = poses.forLevel(level) ?: poses.sphere
+        var from by remember(poses) { mutableStateOf(initial) }
+        var to by remember(poses) { mutableStateOf(initial) }
         var settledAt by remember { mutableFloatStateOf(0f) }
         val progress = remember { Animatable(1f) }
-        LaunchedEffect(target) {
+        val opacity = remember { Animatable(if (level == CueLevel.Idle) 0f else 1f) }
+        LaunchedEffect(level, poses) {
+            val fade = tween<Float>(spec.fadeMs.toInt(), easing = FastOutSlowInEasing)
+            val target = poses.forLevel(level)
+            if (target == null) {                       // Idle: fade out in place
+                opacity.animateTo(0f, fade)
+                return@LaunchedEffect
+            }
+            if (opacity.value < 0.01f) {                // invisible: jump to the new shape, then fade in
+                from = target
+                to = target
+                progress.snapTo(1f)
+                settledAt = now
+            }
+            launch { opacity.animateTo(1f, fade) }
             if (target !== to) {
                 from = interpPose(from, to, progress.value, spec.easing)
                 to = target
                 progress.snapTo(0f)
-                val d = spec.transitionMs + if (level == CueLevel.L2) spec.settleMs else 0f
+                val d = spec.transitionMs + if (target === poses.card) spec.settleMs else 0f
                 progress.animateTo(1f, tween(d.toInt(), easing = LinearEasing))
                 settledAt = now
             }
@@ -154,20 +183,30 @@ fun AiVisualCue(
         val tl = progress.value
         var pose = interpPose(from, to, tl, spec.easing)
         val since = timeMs - settledAt
-        if (level == CueLevel.L1 && tl >= 1f) {
+        if (to === poses.sphere && tl >= 1f) {
             val wave = sin(2f * PI.toFloat() * since / spec.floatPeriodMs)
             val env = clamp01(since / 400f)
             pose = pose.copy(cy = pose.cy + wave * spec.floatAmplitude * env, shadow = pose.shadow * (1f - 0.15f * wave * env))
         }
-        val items = FloatArray(3)
-        if (level == CueLevel.L2 && tl >= 1f) {
-            for (i in 0 until 3) items[i] = clamp01((since - 120f - i * spec.componentStaggerMs) / 260f)
+        val comps = FloatArray(3)
+        if (to !== poses.sphere) {
+            for (i in 0 until 3) {
+                comps[i] = when {
+                    to === poses.full -> 1f
+                    tl >= 1f -> clamp01((since - 120f - i * spec.componentStaggerMs) / 260f)
+                    else -> 0f
+                }
+            }
         }
-        val glowW = if (level == CueLevel.L3) 28f * (1f + 0.15f * sin(2f * PI.toFloat() * timeMs / 2000f)) else 28f
+        val glowW = 28f * (1f + 0.15f * sin(2f * PI.toFloat() * timeMs / 2000f))
         val inTransition = spec.phaseTransition && tl < 1f
         val phase = if (inTransition) 2f * PI.toFloat() * spec.easing.transform(tl) else 0f
         val phaseAmt = if (inTransition) sin(PI.toFloat() * tl) else 0f
-        CueLayer(spec, CueFrame(pose, phase, phaseAmt, glowW, items), timeMs, background)
+        val o = opacity.value
+        val push = clamp01((1f - pose.elev) / 0.7f) * o
+        val frame = CueFrame(pose, phase, phaseAmt, glowW, cueItems(poses.card, pose, comps, o, w), o, push)
+        underlay((push * (spec.cardHeight + spec.insertGap)).dp, (1f - pose.fill) * o)
+        CueLayer(spec, frame, timeMs, background)
     }
 }
 
@@ -178,8 +217,12 @@ private data class CuePose(
     val elev: Float, val bevel: Float, val shadow: Float, val fill: Float, val scrim: Float,
 )
 
+/** One list row in dp. [sf] = 0 card style … 1 full-screen style. */
+private class CueItem(val x: Float, val y: Float, val w: Float, val h: Float, val a: Float, val sf: Float)
+
 private class CueFrame(
-    val pose: CuePose, val phase: Float, val phaseAmt: Float, val glowW: Float, val items: FloatArray, val opacity: Float = 1f,
+    val pose: CuePose, val phase: Float, val phaseAmt: Float, val glowW: Float,
+    val items: List<CueItem>, val opacity: Float, val push: Float,
 )
 
 private fun mixf(a: Float, b: Float, t: Float) = a + (b - a) * t
@@ -196,17 +239,39 @@ private fun interpPose(a: CuePose, b: CuePose, t: Float, ease: CubicBezierEasing
     )
 }
 
+/** 3 rows inside the settled card re-flow into a 5-row full-screen list as the cue spreads (1 - fill). */
+private fun cueItems(card: CuePose, pose: CuePose, comps: FloatArray, opacity: Float, screenW: Float): List<CueItem> {
+    val pad = 16f
+    val gap = 10f
+    val rowH = (card.hy * 2f - pad * 2f - gap * 2f) / 3f
+    val rowW = card.hx * 2f - pad * 2f
+    val k = 1f - pose.fill
+    val fx = 28f
+    val fTop = 72f
+    val fH = 84f
+    val fGap = 14f
+    val fW = screenW - fx * 2f
+    return List(5) { i ->
+        val ki = FastOutSlowInEasing.transform(clamp01((k - i * 0.05f) / 0.8f))
+        val fy = fTop + i * (fH + fGap)
+        if (i < 3) {
+            val cy = card.cy - card.hy + pad + i * (rowH + gap) + (1f - comps[i]) * 10f
+            CueItem(mixf(card.cx - card.hx + pad, fx, ki), mixf(cy, fy, ki), mixf(rowW, fW, ki), mixf(rowH, fH, ki), comps[i] * opacity, ki)
+        } else {
+            CueItem(fx, fy + (1f - ki) * 12f, fW, fH, clamp01((k - 0.5f - (i - 3) * 0.12f) / 0.3f) * opacity, ki)
+        }
+    }
+}
+
 private class CuePoses(s: AiVisualCueSpec, w: Float, h: Float) {
-    val flat = CuePose(w / 2f, s.topInset + s.flatThickness / 2f, s.sphereDiameter * s.flatWidthRatio / 2f, s.flatThickness / 2f,
-        s.flatThickness / 2f, 0f, s.flatThickness / 2f, 0f, 1f, 0f)
     val sphere = CuePose(w / 2f, s.topInset + 12f + s.sphereDiameter / 2f, s.sphereDiameter / 2f, s.sphereDiameter / 2f,
-        s.sphereDiameter / 2f, 1f, s.sphereDiameter / 2f, 1f, 1f, 0.06f)
-    val card = CuePose(w / 2f, h - s.bottomInset - s.cardHeight / 2f, w / 2f - s.margin, s.cardHeight / 2f,
-        s.cardCorner, 0.3f, s.cardThickness, 0.18f, 1f, 0.14f)
-    val full = CuePose(w / 2f, h / 2f, w / 2f, h / 2f, 28f, 0.12f, 40f, 0f, 0f, 0.3f)
-    val all = listOf(flat, sphere, card, full)
-    fun forLevel(l: CueLevel) = when (l) {
-        CueLevel.Idle -> flat
+        s.sphereDiameter / 2f, 1f, s.sphereDiameter / 2f, 1f, 1f, 0f)
+    val card = CuePose(w / 2f, if (s.cardTop >= 0f) s.cardTop + s.cardHeight / 2f else h - s.bottomInset - s.cardHeight / 2f,
+        w / 2f - s.margin, s.cardHeight / 2f, s.cardCorner, 0.3f, s.cardThickness, 0.18f, 1f, 0f)
+    val full = CuePose(w / 2f, h / 2f, w / 2f, h / 2f, 28f, 0.12f, 40f, 0f, 0f, 0.06f)
+    val all = listOf(sphere, card, full)
+    fun forLevel(l: CueLevel): CuePose? = when (l) {
+        CueLevel.Idle -> null
         CueLevel.L1 -> sphere
         CueLevel.L2 -> card
         CueLevel.L3 -> full
@@ -216,20 +281,19 @@ private class CuePoses(s: AiVisualCueSpec, w: Float, h: Float) {
 private class CueSegment(
     val hold: Boolean, val a: Int, val b: Int, val dur: Float,
     val floating: Boolean = false, val comps: Boolean = false, val breathe: Boolean = false,
-    val appear: Boolean = false, val vanish: Boolean = false,
+    val appear: Boolean = false, val vanish: Boolean = false, val keep: Boolean = false,
 ) { var t0 = 0f }
 
-private class CueTimeline(private val s: AiVisualCueSpec, w: Float, h: Float) {
+private class CueTimeline(private val s: AiVisualCueSpec, private val w: Float, h: Float) {
     private val poses = CuePoses(s, w, h).all
     private val segs = listOf(
-        CueSegment(true, 0, 0, s.flatHoldMs, appear = true),                  // Idle (flat), fades in
-        CueSegment(false, 0, 1, s.transitionMs),                              // L1 rise
-        CueSegment(true, 1, 1, s.l1HoldMs, floating = true),                  // L1 float
-        CueSegment(false, 1, 2, s.transitionMs + s.settleMs),                 // L2 spread + settle
-        CueSegment(true, 2, 2, s.l2HoldMs, comps = true),                     // L2 list items
-        CueSegment(false, 2, 3, s.transitionMs),                              // L3 expand
-        CueSegment(true, 3, 3, s.l3HoldMs, breathe = true),                   // L3 edge glow
-        CueSegment(false, 3, 0, s.transitionMs, vanish = true),               // shrink to top and vanish
+        CueSegment(true, 0, 0, s.fadeMs, appear = true),                          // fade in
+        CueSegment(true, 0, 0, s.l1HoldMs, floating = true),                      // L1 float
+        CueSegment(false, 0, 1, s.transitionMs + s.settleMs),                     // L2 spread + slot in
+        CueSegment(true, 1, 1, s.l2HoldMs, comps = true),                         // L2 list rows
+        CueSegment(false, 1, 2, s.transitionMs, keep = true),                     // L3 spread to full screen
+        CueSegment(true, 2, 2, s.l3HoldMs, breathe = true, keep = true),          // L3 full-screen list
+        CueSegment(true, 2, 2, s.fadeMs, vanish = true, keep = true),             // fade out
     )
     val loopMs: Float
 
@@ -243,26 +307,27 @@ private class CueTimeline(private val s: AiVisualCueSpec, w: Float, h: Float) {
         val t = ((tMs % loopMs) + loopMs) % loopMs
         val g = segs.lastOrNull { it.t0 <= t } ?: segs.first()
         val local = t - g.t0
-        val items = FloatArray(3)
+        val comps = FloatArray(3)
         var glowW = 28f
         var phase = 0f
         var phaseAmt = 0f
         var opacity = 1f
-        if (g.appear) opacity = if (g.dur > 0f) clamp01((local - 0.3f * g.dur) / (0.7f * g.dur)) else 1f
         val pose: CuePose
         if (g.hold) {
             var p = poses[g.a]
+            if (g.appear) opacity = if (g.dur > 0f) FastOutSlowInEasing.transform(clamp01((local - 0.25f * g.dur) / (0.75f * g.dur))) else 1f
+            if (g.vanish) opacity = 1f - FastOutSlowInEasing.transform(clamp01(local / max(g.dur, 1f)))
             if (g.floating) {
                 val env = clamp01(min(local / 400f, (g.dur - local) / 400f))
                 val wave = sin(2f * PI.toFloat() * local / s.floatPeriodMs)
                 p = p.copy(cy = p.cy + wave * s.floatAmplitude * env, shadow = p.shadow * (1f - 0.15f * wave * env))
             }
             if (g.comps) {
-                for (i in 0 until 3) {
-                    items[i] = clamp01((local - 120f - i * s.componentStaggerMs) / 260f) * clamp01((g.dur - local) / 220f)
-                }
+                for (i in 0 until 3) comps[i] = clamp01((local - 120f - i * s.componentStaggerMs) / 260f)
             }
-            if (g.breathe) glowW = 28f * (1f + 0.15f * sin(2f * PI.toFloat() * local / 2000f))
+            if (g.breathe || g.vanish) {
+                glowW = 28f * (1f + 0.15f * sin(2f * PI.toFloat() * (local + if (g.vanish) s.l3HoldMs else 0f) / 2000f))
+            }
             pose = p
         } else {
             val tl = clamp01(local / g.dur)
@@ -271,9 +336,10 @@ private class CueTimeline(private val s: AiVisualCueSpec, w: Float, h: Float) {
                 phase = 2f * PI.toFloat() * s.easing.transform(tl)
                 phaseAmt = sin(PI.toFloat() * tl)
             }
-            if (g.vanish) opacity = 1f - s.easing.transform(clamp01((tl - 0.35f) / 0.65f))
         }
-        return CueFrame(pose, phase, phaseAmt, glowW, items, opacity)
+        if (g.keep) comps.fill(1f)
+        val push = clamp01((1f - pose.elev) / 0.7f) * opacity
+        return CueFrame(pose, phase, phaseAmt, glowW, cueItems(poses[1], pose, comps, opacity, w), opacity, push)
     }
 }
 
@@ -292,13 +358,15 @@ private fun rememberCueTimeMs(): State<Float> = produceState(0f) {
 
 @Composable
 private fun CueLayer(spec: AiVisualCueSpec, frame: CueFrame, timeMs: Float, background: Shader?) {
+    val dark = isSystemInDarkTheme()
+    val accent = remember(spec.stops) { Color(spec.stops.minByOrNull { it.position }?.argb ?: 0xFF3A77FF) }
     Box(Modifier.fillMaxSize()) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             ShaderCue(spec, frame, timeMs, background)
         } else {
             FallbackCue(spec, frame)
         }
-        CueComponents(frame)
+        CueComponents(frame, accent, dark)
     }
 }
 
@@ -339,7 +407,7 @@ private fun ShaderCue(spec: AiVisualCueSpec, frame: CueFrame, timeMs: Float, bac
         shader.setFloatUniform("uFill", p.fill)
         shader.setFloatUniform("uGlowW", frame.glowW)
         shader.setFloatUniform("uGlow", spec.glow)
-        shader.setFloatUniform("uScrim", if (spec.scrim) p.scrim else 0f)
+        shader.setFloatUniform("uScrim", if (spec.scrim) p.scrim * frame.opacity else 0f)
         shader.setFloatUniform("uPhase", frame.phase)
         shader.setFloatUniform("uPhaseAmt", frame.phaseAmt)
         shader.setFloatUniform(
@@ -370,7 +438,7 @@ private fun FallbackCue(spec: AiVisualCueSpec, frame: CueFrame) {
     Canvas(Modifier.fillMaxSize()) {
         val p = frame.pose
         val d = density
-        if (spec.scrim) drawRect(Color.Black.copy(alpha = p.scrim))
+        if (spec.scrim) drawRect(Color.Black.copy(alpha = p.scrim * frame.opacity))
         val hx = max(p.hx, 0.5f)
         val hy = max(p.hy, 0.5f)
         val r = min(p.r, min(hx, hy)) * d
@@ -413,31 +481,28 @@ private fun FallbackCue(spec: AiVisualCueSpec, frame: CueFrame) {
     }
 }
 
-/** The list that appears where the cue settles (L2). Replace with your own content. */
+/** The list that appears where the cue settles (L2) and re-flows to full screen (L3). Replace with your own content. */
 @Composable
-private fun CueComponents(frame: CueFrame) {
-    val p = frame.pose
-    val pad = 16f
-    val gap = 10f
-    val rowH = (p.hy * 2f - pad * 2f - gap * 2f) / 3f
-    val rowW = p.hx * 2f - pad * 2f
-    if (rowH <= 8f || rowW <= 40f) return
-    for (i in 0 until 3) {
-        val a = frame.items[i]
-        if (a <= 0.001f) continue
-        val x = p.cx - p.hx + pad
-        val y = p.cy - p.hy + pad + i * (rowH + gap) + (1f - a) * 10f
-        val icon = min(28f, rowH - 12f)
+private fun CueComponents(frame: CueFrame, accent: Color, dark: Boolean) {
+    val cardBg = Color.White.copy(alpha = 0.22f)
+    val cardBar = Color.White.copy(alpha = 0.88f)
+    val cardBar2 = Color.White.copy(alpha = 0.55f)
+    val fullBg = if (dark) Color(0xDB1E2028) else Color(0xDBFFFFFF)
+    val fullBar = if (dark) Color(0x99EBEDF5) else Color(0x8C161820)
+    val fullBar2 = if (dark) Color(0x4DEBEDF5) else Color(0x47161820)
+    for (item in frame.items) {
+        if (item.a <= 0.001f || item.h < 8f) continue
+        val icon = min(mixf(28f, 40f, item.sf), item.h - 12f)
         Box(
             Modifier
-                .offset(x.dp, y.dp)
-                .size(rowW.dp, rowH.dp)
-                .graphicsLayer { alpha = a }
-                .background(Color.White.copy(alpha = 0.22f), RoundedCornerShape(14.dp)),
+                .offset(item.x.dp, item.y.dp)
+                .size(item.w.dp, item.h.dp)
+                .graphicsLayer { alpha = item.a }
+                .background(lerp(cardBg, fullBg, item.sf), RoundedCornerShape(14.dp)),
         ) {
-            Box(Modifier.offset(12.dp, ((rowH - icon) / 2f).dp).size(icon.dp).background(Color.White.copy(alpha = 0.88f), CircleShape))
-            Box(Modifier.offset((24f + icon).dp, (rowH / 2f - 10f).dp).size((rowW * 0.45f).dp, 7.dp).background(Color.White.copy(alpha = 0.88f), RoundedCornerShape(4.dp)))
-            Box(Modifier.offset((24f + icon).dp, (rowH / 2f + 3f).dp).size((rowW * 0.28f).dp, 6.dp).background(Color.White.copy(alpha = 0.55f), RoundedCornerShape(3.dp)))
+            Box(Modifier.offset(12.dp, ((item.h - icon) / 2f).dp).size(icon.dp).background(lerp(cardBar, accent.copy(alpha = 0.95f), item.sf), CircleShape))
+            Box(Modifier.offset((24f + icon).dp, (item.h / 2f - 10f).dp).size((item.w * 0.45f).dp, 7.dp).background(lerp(cardBar, fullBar, item.sf), RoundedCornerShape(4.dp)))
+            Box(Modifier.offset((24f + icon).dp, (item.h / 2f + 3f).dp).size((item.w * 0.28f).dp, 6.dp).background(lerp(cardBar2, fullBar2, item.sf), RoundedCornerShape(3.dp)))
         }
     }
 }
