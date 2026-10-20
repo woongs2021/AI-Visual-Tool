@@ -363,9 +363,9 @@ pre.code{margin:0;padding:16px 20px 40px;font-family:var(--f-mono);font-size:11.
             <canvas id="bgA" aria-hidden="true"></canvas>
             <canvas id="glA" aria-label="비주얼 큐 단독 프리뷰"></canvas>
             <div class="comp" id="compA"></div>
-            <div class="hud" id="hudA"><span data-k="tl">AI Visual Cue</span><span data-k="tr">360 × 780 dp</span><span data-k="bl">L1 / 3</span><span data-k="br">대기</span></div>
+            <div class="hud" id="hudA" hidden><span data-k="tl"></span><span data-k="tr"></span><span data-k="bl"></span><span data-k="br"></span></div>
           </div>
-          <div class="cap"><b>① 비주얼 큐</b><span>물성 · 모션</span></div>
+          <div class="cap"><b>① 비주얼 큐</b><span>물성만</span></div>
         </div>
         <div class="frame-col" id="colB">
           <div class="device" id="devB">
@@ -996,12 +996,13 @@ const accentHex  = () => S.listAccent  || sortedStops()[0].color;
 const surfaceHex = () => S.listSurface || (effectiveDark() ? '#1E2028' : '#FFFFFF');
 const shadowHex  = () => S.shadowColor || toHex(hexToRgb(sortedStops()[0].color).map(v=>v*0.45));
 const bgHex      = () => S.bgColor     || (effectiveDark() ? '#101116' : '#F3F4F6');
-function drawGridBg(ctx, W, H, s, dark){
+// ① shows the material alone: a plain background (dots only on the small material thumbnails)
+function drawGridBg(ctx, W, H, s, dark, dots=false){
   ctx.setTransform(s,0,0,s,0,0);
   const bg = bgHex();
   ctx.fillStyle = bg; ctx.fillRect(0,0,W,H);
   ctx.fillStyle = luminance(bg) < 0.4 ? 'rgba(255,255,255,.09)' : 'rgba(20,24,44,.10)';
-  for(let y=16;y<H;y+=16) for(let x=12;x<W;x+=16){ ctx.beginPath(); ctx.arc(x,y,0.9,0,6.2832); ctx.fill(); }
+  if(dots) for(let y=16;y<H;y+=16) for(let x=12;x<W;x+=16){ ctx.beginPath(); ctx.arc(x,y,0.9,0,6.2832); ctx.fill(); }
 }
 function rr(ctx,x,y,w,h,r){ ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x,y,w,h,r) : ctx.rect(x,y,w,h); }
 const APP_TEXT = {
@@ -1274,7 +1275,8 @@ function renderFrame(k, fr){
   const c = f.css, st = rowStyles();
   f.items.forEach((el,i)=>{
     const it = fr.items[i];
-    if(it.a<=0.001 || it.h<8){ if(el.style.opacity!=='0') el.style.opacity='0'; return; }
+    // ① shows the cue material only, no generated UI
+    if(!f.app || it.a<=0.001 || it.h<8){ if(el.style.opacity!=='0') el.style.opacity='0'; return; }
     el.style.transform = `translate(${it.x*c}px, ${it.y*c}px)`;
     el.style.opacity = it.a.toFixed(3);
     const g = itemGeom(it), [bg, ic, t1, t2] = el.children, [s1, s2] = cueText(i);
@@ -1287,7 +1289,7 @@ function renderFrame(k, fr){
     txt(t1, s1, g.t1y, g.f1, rgba(mixc(st.card.b1, st.full.b1, it.sf)));
     txt(t2, s2, g.t2y, g.f2, rgba(mixc(st.card.b2, st.full.b2, it.sf)));
   });
-  if(k==='A'){ hudA.bl.textContent = `L${fr.level} / 3`; hudA.br.textContent = fr.seg.name; }
+
 }
 function tick(now){
   const dt = Math.min(64, now-last); last = now;
@@ -1567,7 +1569,7 @@ function composeExportFrame(keys, scale, tl, clock, pad, gap, stageCol){
     exCtx.save();
     if(keys.length > 1){ rr(exCtx, x, y, pw, ph, 30*scale); exCtx.clip(); }
     exCtx.drawImage(exBg, x, y); exCtx.drawImage(exGL, x, y);
-    drawItems2D(exCtx, fr.items, x, y, scale, st);
+    if(k==='B') drawItems2D(exCtx, fr.items, x, y, scale, st);
     exCtx.restore();
   });
 }
@@ -1643,7 +1645,7 @@ function renderThumbs(){
   if(!thumbR) return;
   const dark = effectiveDark(), sc = 128/100;
   const bctx = thumbBg.getContext('2d'); bctx.setTransform(1,0,0,1,0,0);
-  drawGridBg(bctx, 100, 100, sc, dark); thumbR.setBg(thumbBg);
+  drawGridBg(bctx, 100, 100, sc, dark, true); thumbR.setBg(thumbBg);
   const fr = { pose:{cx:50,cy:46,hx:31,hy:31,r:31,elev:1,bevel:31,shadow:1,fill:1,scrim:0}, glowW:28, phase:0, phaseAmt:0 };
   const keep = S.material, o = thumbOut.getContext('2d');
   for(const k of MAT_KEYS){
