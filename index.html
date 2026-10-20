@@ -49,7 +49,11 @@ button,input,select{font:inherit;color:inherit}
 .tabs{display:flex;gap:2px;padding:3px;border-radius:999px;background:var(--bg);border:1px solid var(--line)}
 .tab{border:0;background:none;padding:6px 16px;border-radius:999px;cursor:pointer;color:var(--muted);font-weight:500;white-space:nowrap}
 .tab[aria-selected="true"]{background:var(--raise);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
-.theme-btn{justify-self:end;width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:var(--raise);cursor:pointer;display:grid;place-items:center;font-size:16px;line-height:1}
+.top-actions{justify-self:end;display:flex;align-items:center;gap:8px}
+.default-btn{height:36px;padding:0 14px;border-radius:999px;border:0;background:var(--ink);color:var(--bg);cursor:pointer;font-weight:500;white-space:nowrap}
+.default-btn.saved{background:var(--raise);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line)}
+.default-info{font-size:11.5px;color:var(--faint);margin-right:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.theme-btn{width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:var(--raise);cursor:pointer;display:grid;place-items:center;font-size:16px;line-height:1}
 
 /* ---------- workspace ---------- */
 .workspace{flex:1;min-height:0;display:grid;grid-template-columns:minmax(340px,1fr) 2fr}
@@ -96,7 +100,7 @@ button,input,select{font:inherit;color:inherit}
 .crow-t small{font-size:11px;color:var(--faint)}
 .rst{border:0;background:none;color:var(--accent);cursor:pointer;font-size:13px;line-height:1;padding:0 2px;margin-left:6px}
 .row-label .rv{display:inline-flex;align-items:center}
-.pane-foot{padding:18px 0 4px;display:flex;justify-content:flex-end}
+.pane-foot{padding:18px 0 4px;display:flex;justify-content:flex-end;align-items:center;gap:8px;flex-wrap:wrap}
 /* color picker popover */
 .picker{position:fixed;z-index:30;width:240px;padding:12px;border-radius:var(--r-m);background:var(--raise);border:1px solid var(--line);box-shadow:0 20px 50px -20px rgba(10,14,40,.45);display:flex;flex-direction:column;gap:10px}
 .pk-sv{position:relative;height:150px;border-radius:6px;cursor:crosshair;touch-action:none}
@@ -236,6 +240,7 @@ pre.code{margin:0;padding:16px 20px 40px;font-family:var(--f-mono);font-size:11.
   .pane-design{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 }
 @media (max-width:480px){
+  .default-btn{padding:0 10px;font-size:12px}
   .brand span{display:none}
   .mats{grid-template-columns:repeat(3,1fr)}
   .ctrl-grid{grid-template-columns:1fr}
@@ -255,7 +260,10 @@ pre.code{margin:0;padding:16px 20px 40px;font-family:var(--f-mono);font-size:11.
     <button class="tab" role="tab" id="tab-btn-cue" aria-selected="true" aria-controls="view-cue">AI Visual Cue</button>
     <button class="tab" role="tab" id="tab-btn-about" aria-selected="false" aria-controls="view-about">About</button>
   </nav>
-  <button class="theme-btn" id="themeBtn" type="button" aria-label="다크 모드로 전환" title="테마 전환">☾</button>
+  <div class="top-actions">
+    <button class="default-btn" id="setDefaultBtn" type="button" title="지금 설정과 뷰를 기본값으로 저장합니다. 다음에 열면 이 화면에서 시작하고, 초기화하면 이 값으로 돌아갑니다.">Set as default</button>
+    <button class="theme-btn" id="themeBtn" type="button" aria-label="다크 모드로 전환" title="테마 전환">☾</button>
+  </div>
 </header>
 
 <main class="workspace" id="view-cue" role="tabpanel" aria-labelledby="tab-btn-cue">
@@ -313,7 +321,7 @@ pre.code{margin:0;padding:16px 20px 40px;font-family:var(--f-mono);font-size:11.
         <div class="sec-h"><h3 id="h-shadow">그림자</h3><button class="link-btn" type="button" data-reset="shadow">초기화</button></div>
         <div class="ctrl-grid" id="shadowCtrls"></div>
       </section>
-      <div class="pane-foot"><button class="icon-btn" id="resetAll" type="button">전체 초기화</button></div>
+      <div class="pane-foot"><span class="default-info" id="defaultInfo"></span><button class="icon-btn" id="resetAll" type="button">전체 초기화</button></div>
     </div>
 
     <div class="pane pane-code" id="paneCode" hidden>
@@ -394,6 +402,7 @@ pre.code{margin:0;padding:16px 20px 40px;font-family:var(--f-mono);font-size:11.
       <ol>
         <li>Design 탭에서 컬러(그라데이션 스톱 최대 3개), 물성, 크기, 모션을 조절합니다. 프리뷰는 바로 바뀝니다.</li>
         <li>프리뷰는 3개 뷰로 볼 수 있습니다. 좌우 화살표, 키보드 ←/→, 드래그로 넘깁니다. 스페이스바로 재생을 멈춥니다.</li>
+        <li>상단 "Set as default"를 누르면 지금 설정과 보고 있는 뷰가 이 브라우저에 기본값으로 저장됩니다. 다음에 열면 그 화면에서 시작하고, 모든 초기화 버튼도 그 값으로 돌아갑니다. 패널 맨 아래 "처음 기본값으로"를 누르면 저장한 기본값이 지워집니다.</li>
         <li>각 슬라이더 옆 ↺ 버튼으로 그 값만, 섹션 제목 옆 "초기화"로 섹션 전체를, 맨 아래 "전체 초기화"로 모든 설정을 기본값으로 되돌립니다.</li>
         <li>프리뷰 위 "내보내기"에서 루프 한 번을 MP4(720 × 1560, 30fps) 또는 GIF(360 × 780, 15fps, 무한 반복)로 저장합니다.</li>
         <li>Code 탭에서 Kotlin 파일 전체를 복사해 Android 프로젝트에 붙여넣고 <span class="mono">AiVisualCueDemoLoop()</span> 또는 <span class="mono">AiVisualCue(level)</span>을 호출합니다.</li>
@@ -470,7 +479,7 @@ const MATS = {
 };
 const EASINGS = { reference:[0.6,0,0.1,1], standard:[0.2,0,0,1], spring:[0.34,1.36,0.64,1] };
 
-function defaultSpec(){
+function factorySpec(){
   return {
     version:1,
     stops: PRESETS.azure.stops.map(s=>({...s})), preset:'azure', gradType:'radial', angle:90, hlX:0, hlY:-0.3,
@@ -483,11 +492,12 @@ function defaultSpec(){
     alpha:0.5, lang:'en', specRev:2,
   };
 }
-function loadSpec(){
-  const d = defaultSpec();
-  try{
-    const raw = localStorage.getItem('avc-spec-v1'); if(!raw) return d;
-    const o = JSON.parse(raw); if(!o || o.version!==1) return d;
+// "Set as default": a snapshot saved in this browser. When present, the page opens on it
+// and every reset (↺, section, reset-all) returns to it instead of the factory values.
+const USER_DEFAULT_KEY = 'avc-user-default-v1';
+let USER_DEFAULT = null;   // { spec, view, savedAt }
+try{ const raw = localStorage.getItem(USER_DEFAULT_KEY); if(raw){ const u = JSON.parse(raw); if(u && u.spec && u.spec.version===1) USER_DEFAULT = u; } }catch(e){}
+function normalizeSpec(o, d){
     const s = {...d, ...o, matParams:{...d.matParams, ...(o.matParams||{})}};
     if((o.specRev||0) < 2){   // one-time move from earlier defaults to the current ones
       if(o.diameter===132 || o.diameter===92) s.diameter = d.diameter;
@@ -499,6 +509,19 @@ function loadSpec(){
     if(!MATS[s.material]) s.material = d.material;
     if(!EASINGS[s.easing]) s.easing = d.easing;
     return s;
+}
+let DEFAULT_CACHE = null;
+function defaultSpec(){
+  if(!DEFAULT_CACHE) DEFAULT_CACHE = USER_DEFAULT ? normalizeSpec(USER_DEFAULT.spec, factorySpec()) : factorySpec();
+  return JSON.parse(JSON.stringify(DEFAULT_CACHE));
+}
+function loadSpec(){
+  if(USER_DEFAULT) return defaultSpec();          // open on the saved default
+  const d = factorySpec();
+  try{
+    const raw = localStorage.getItem('avc-spec-v1'); if(!raw) return d;
+    const o = JSON.parse(raw); if(!o || o.version!==1) return d;
+    return normalizeSpec(o, d);
   }catch(e){ return d; }
 }
 let S = loadSpec();
@@ -1121,6 +1144,7 @@ const VIEWS = [
 ];
 let view = 0;
 try{ const v = +localStorage.getItem('avc-view'); if(v>=0 && v<3) view = v; }catch(e){}
+if(USER_DEFAULT && USER_DEFAULT.view>=0 && USER_DEFAULT.view<3) view = USER_DEFAULT.view;
 const dotsEl = $('#dots');
 VIEWS.forEach((v,i)=>{ const b=document.createElement('button'); b.type='button'; b.setAttribute('aria-label', v.name); b.onclick=()=>setView(i); dotsEl.appendChild(b); });
 function setView(i, dir){
@@ -1290,9 +1314,10 @@ function rangeCtrl(host, label, unit, min, max, step, get, set, def, fmt){
   w.innerHTML = `<div class="row-label"><label for="${id}">${label}</label><span class="rv"><output for="${id}"></output><button class="rst" type="button" title="기본값으로" aria-label="${label} 기본값으로" hidden>↺</button></span></div><input type="range" id="${id}" min="${min}" max="${max}" step="${step}">`;
   const inp = w.querySelector('input'), out = w.querySelector('output'), rst = w.querySelector('.rst');
   const paint = ()=>{ const v=get(); inp.value=v; out.textContent = (fmt ? fmt(v) : (+v).toFixed(step<0.1?2:step<1?1:0)) + (unit?(unit==='%'?'%':` ${unit}`):''); inp.style.setProperty('--p', ((v-min)/(max-min)*100)+'%');
-    rst.hidden = def==null || Math.abs(v-def) < step/2; };
+    const dv = typeof def==='function' ? def() : def;
+    rst.hidden = dv==null || Math.abs(v-dv) < step/2; };
   inp.addEventListener('input', ()=>{ set(+inp.value); paint(); });
-  rst.addEventListener('click', ()=>{ set(def); paint(); });
+  rst.addEventListener('click', ()=>{ set(typeof def==='function' ? def() : def); paint(); });
   host.appendChild(w); paint(); w.paint = paint; return w;
 }
 function segCtrl(el, get, set){
@@ -1355,8 +1380,8 @@ stopAdd.onclick = ()=>{ if(S.stops.length>=3) return; const st=sortedStops();
   S.stops.push({color: st.length? st[st.length-1].color : '#3A77FF', pos, name:'New'}); selStop=S.stops.length-1; S.preset=null; paintGrad(); paintPresets(); changed({thumbs:true}); };
 const paintGradType = segCtrl($('#gradType'), ()=>S.gradType, v=>{ S.gradType=v; changed({thumbs:true}); });
 const colorCtrls = [
-  rangeCtrl($('#colorCtrls'),'하이라이트 가로','',-0.8,0.8,0.01,()=>S.hlX,v=>{S.hlX=v;changed({thumbs:true});},defaultSpec().hlX),
-  rangeCtrl($('#colorCtrls'),'하이라이트 세로','',-0.8,0.8,0.01,()=>S.hlY,v=>{S.hlY=v;changed({thumbs:true});},defaultSpec().hlY),
+  rangeCtrl($('#colorCtrls'),'하이라이트 가로','',-0.8,0.8,0.01,()=>S.hlX,v=>{S.hlX=v;changed({thumbs:true});},()=>defaultSpec().hlX),
+  rangeCtrl($('#colorCtrls'),'하이라이트 세로','',-0.8,0.8,0.01,()=>S.hlY,v=>{S.hlY=v;changed({thumbs:true});},()=>defaultSpec().hlY),
 ];
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
@@ -1373,16 +1398,16 @@ function paintMat(){
   const m = MATS[S.material];
   $('#matDesc').textContent = m.desc; $('#matHint').textContent = m.en;
   const host = $('#matCtrls'); host.innerHTML='';
-  m.params.forEach(([label,min,max,step],i)=>rangeCtrl(host,label,'',min,max,step,()=>S.matParams[S.material][i],v=>{S.matParams[S.material][i]=v;changed({thumbs:true});},m.def[i]));
+  m.params.forEach(([label,min,max,step],i)=>rangeCtrl(host,label,'',min,max,step,()=>S.matParams[S.material][i],v=>{S.matParams[S.material][i]=v;changed({thumbs:true});},()=>defaultSpec().matParams[S.material][i]));
 }
 
 // size / motion / shadow
 const ctrlSets = [];
-function addSet(host, defs){ const d = defaultSpec(); defs.forEach(([k,label,unit,min,max,step])=>ctrlSets.push(rangeCtrl($(host),label,unit,min,max,step,()=>S[k],v=>{S[k]=v;changed({motion:true, thumbs:k==='diameter'});},d[k]))); }
+function addSet(host, defs){ defs.forEach(([k,label,unit,min,max,step])=>ctrlSets.push(rangeCtrl($(host),label,unit,min,max,step,()=>S[k],v=>{S[k]=v;changed({motion:true, thumbs:k==='diameter'});},()=>defaultSpec()[k]))); }
 addSet('#sizeCtrls', [['diameter','구 지름','dp',64,220,1],['cardH','안착 높이','dp',120,360,1],['cardThick','안착 두께','dp',2,40,1],['cardCorner','안착 모서리','dp',0,48,1],['margin','좌우 여백','dp',0,40,1]]);
 addSet('#motionCtrls', [['speed','재생 속도','×',0.25,2,0.05],['transMs','전환 시간','ms',300,1600,10],['l1Hold','L1 유지','ms',500,6000,50],['l2Hold','L2 유지','ms',500,6000,50],['l3Hold','L3 유지','ms',500,6000,50],['fadeMs','나타남·사라짐','ms',150,2000,10],['floatAmp','부유 진폭','dp',0,10,0.5],['floatPeriod','부유 주기','ms',800,5000,50],['drift','하이라이트 흔들림','',0,1,0.01],['stagger','컴포넌트 간격','ms',0,200,5]]);
 addSet('#shadowCtrls', [['shadow','그림자 강도','',0,1,0.01],['shadowBlur','그림자 번짐','dp',2,40,1],['shadowOff','그림자 거리','dp',0,32,1]]);
-const alphaCtrl = rangeCtrl($('#alphaCtrl'),'투명도','%',0.05,1,0.01,()=>S.alpha,v=>{S.alpha=v;changed({thumbs:true});},defaultSpec().alpha, v=>Math.round(v*100));
+const alphaCtrl = rangeCtrl($('#alphaCtrl'),'투명도','%',0.05,1,0.01,()=>S.alpha,v=>{S.alpha=v;changed({thumbs:true});},()=>defaultSpec().alpha, v=>Math.round(v*100));
 ctrlSets.push(alphaCtrl);
 const paintTrans = segCtrl($('#transStyle'), ()=>S.transition, v=>{ S.transition=v; changed({motion:true}); });
 const paintEase = segCtrl($('#easing'), ()=>S.easing, v=>{ S.easing=v; $('#easeOut').textContent = EASINGS[v].join(', '); changed({motion:true}); });
@@ -1402,7 +1427,29 @@ document.querySelectorAll('[data-reset]').forEach(b=>b.addEventListener('click',
   if(sec==='color') selStop = 0;
   afterReset(`${SECTION_NAMES[sec]}을(를) 기본값으로 되돌렸습니다`);
 }));
-$('#resetAll').onclick = ()=>{ S = defaultSpec(); selStop=0; afterReset('전체 설정을 기본값으로 되돌렸습니다'); };
+$('#resetAll').onclick = ()=>{ S = defaultSpec(); selStop=0; afterReset(USER_DEFAULT ? '저장한 기본값으로 되돌렸습니다' : '전체 설정을 기본값으로 되돌렸습니다'); };
+function fmtSaved(ts){ try{ return new Date(ts).toLocaleString(undefined,{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}); }catch(e){ return ''; } }
+function paintDefaultUI(){
+  const btn = $('#setDefaultBtn'), info = $('#defaultInfo');
+  btn.classList.toggle('saved', !!USER_DEFAULT);
+  info.innerHTML = USER_DEFAULT
+    ? `<span>기본값: ${escapeHtml(fmtSaved(USER_DEFAULT.savedAt))} 저장</span><button class="link-btn" id="clearDefault" type="button">처음 기본값으로</button>`
+    : '<span>기본값: 처음 설정</span>';
+  const c = $('#clearDefault'); if(c) c.onclick = clearUserDefault;
+}
+function setUserDefault(){
+  USER_DEFAULT = { spec: JSON.parse(JSON.stringify(S)), view, savedAt: Date.now() };
+  DEFAULT_CACHE = null;
+  try{ localStorage.setItem(USER_DEFAULT_KEY, JSON.stringify(USER_DEFAULT)); toast('지금 화면을 기본값으로 저장했습니다. 다음에 열면 여기서 시작합니다'); }
+  catch(e){ toast('이 브라우저에서는 저장할 수 없습니다'); }
+  repaintAll(); paintDefaultUI();
+}
+function clearUserDefault(){
+  USER_DEFAULT = null; DEFAULT_CACHE = null;
+  try{ localStorage.removeItem(USER_DEFAULT_KEY); }catch(e){}
+  repaintAll(); paintDefaultUI(); toast('저장한 기본값을 지웠습니다. 초기화하면 처음 설정으로 돌아갑니다');
+}
+$('#setDefaultBtn').onclick = setUserDefault;
 function repaintAll(){ paintGrad(); paintPresets(); paintMat(); paintGradType(); paintTrans(); paintEase(); paintExtras(); $('#easeOut').textContent = EASINGS[S.easing].join(', ');
   colorCtrls.forEach(c=>c.paint()); ctrlSets.forEach(c=>c.paint()); }
 
@@ -2267,6 +2314,7 @@ if(window.matchMedia) matchMedia('(prefers-color-scheme: dark)').addEventListene
 new MutationObserver(()=>{ paintThemeBtn(); layout(); scheduleThumbs(); }).observe(document.documentElement, { attributes:true, attributeFilter:['data-theme'] });
 
 repaintAll();
+paintDefaultUI();
 paintThemeBtn();
 setView(view);
 renderThumbs();
