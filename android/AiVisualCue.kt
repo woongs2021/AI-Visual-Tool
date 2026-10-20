@@ -25,13 +25,18 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
@@ -43,6 +48,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -54,9 +60,13 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 import kotlin.math.PI
 import kotlin.math.cos
@@ -84,9 +94,17 @@ data class AiVisualCueSpec(
     val materialParams: List<Float> = listOf(0.35f, 0.5f, 0.8f, 0f), // 외곽 글로우 · 림 라이트 · 가장자리 부드러움
     val glow: Float = 0.35f,
     val edgeSoftness: Float = 0.8f,
+    val alpha: Float = 1f,                  // overall cue opacity
     val listAccent: Long = 0xFF6449F5,
     val listSurface: Long? = null,   // null = follow the system theme
     val shadowColor: Long = 0xFF2D216E,
+    val listItems: List<Pair<String, String>> = listOf(
+        "Move sync to 3:00 PM" to "Everyone is free · Room 3B open",
+        "Draft agenda from notes" to "3 topics from last review",
+        "Share prototype link" to "Send to 5 attendees",
+        "Summarize Mina’s comments" to "4 new since yesterday",
+        "Block focus time" to "Tomorrow 10:00–12:00",
+    ),
     val sphereDiameter: Float = 92f,
     val cardHeight: Float = 220f,
     val cardThickness: Float = 8f,
@@ -371,7 +389,7 @@ private fun CueLayer(spec: AiVisualCueSpec, frame: CueFrame, timeMs: Float, back
         } else {
             FallbackCue(spec, frame)
         }
-        CueComponents(frame, accent, surface, dark)
+        CueComponents(frame, accent, surface, dark, spec.listItems)
     }
 }
 
@@ -431,7 +449,7 @@ private fun ShaderCue(spec: AiVisualCueSpec, frame: CueFrame, timeMs: Float, bac
         shader.setFloatUniform("uDir", cos(angle), sin(angle))
         shader.setFloatUniform("uNeutral", 0.92f, 0.92f, 0.93f)
         shader.setFloatUniform("uEdgeSoft", spec.edgeSoftness)
-        shader.setFloatUniform("uOpacity", frame.opacity)
+        shader.setFloatUniform("uOpacity", frame.opacity * spec.alpha)
         val sc = Color(spec.shadowColor)
         shader.setFloatUniform("uShadowCol", sc.red, sc.green, sc.blue)
         drawRect(brush = ShaderBrush(shader))
@@ -451,7 +469,7 @@ private fun FallbackCue(spec: AiVisualCueSpec, frame: CueFrame) {
         val r = min(p.r, min(hx, hy)) * d
         val topLeft = Offset((p.cx - hx) * d, (p.cy - hy) * d)
         val sz = Size(hx * 2f * d, hy * 2f * d)
-        val o = frame.opacity
+        val o = frame.opacity * spec.alpha
         val shadowA = 0.22f * p.shadow * spec.shadowStrength * o
         if (shadowA > 0.005f) {
             drawRoundRect(
@@ -490,18 +508,23 @@ private fun FallbackCue(spec: AiVisualCueSpec, frame: CueFrame) {
 
 /** The list that appears where the cue settles (L2) and re-flows to full screen (L3). Replace with your own content. */
 @Composable
-private fun CueComponents(frame: CueFrame, accent: Color, surface: Color?, dark: Boolean) {
+private fun CueComponents(frame: CueFrame, accent: Color, surface: Color?, dark: Boolean, texts: List<Pair<String, String>>) {
     val cardBg = Color.White.copy(alpha = 0.22f)
-    val cardBar = Color.White.copy(alpha = 0.88f)
-    val cardBar2 = Color.White.copy(alpha = 0.55f)
+    val cardIcon = Color.White.copy(alpha = 0.9f)
+    val cardT1 = Color.White.copy(alpha = 0.97f)
+    val cardT2 = Color.White.copy(alpha = 0.78f)
     val base = surface ?: if (dark) Color(0xFF1E2028) else Color.White
     val fullBg = base.copy(alpha = 0.86f)
     val lightSurface = base.luminance() > 0.5f
-    val fullBar = if (lightSurface) Color(0x8C161820) else Color(0x99EBEDF5)
-    val fullBar2 = if (lightSurface) Color(0x47161820) else Color(0x4DEBEDF5)
-    for (item in frame.items) {
-        if (item.a <= 0.001f || item.h < 8f) continue
+    val fullT1 = if (lightSurface) Color(0xEB161820) else Color(0xF2EBEDF5)
+    val fullT2 = if (lightSurface) Color(0x94161820) else Color(0x9EEBEDF5)
+    frame.items.forEachIndexed { i, item ->
+        if (item.a <= 0.001f || item.h < 8f) return@forEachIndexed
         val icon = min(mixf(28f, 40f, item.sf), item.h - 12f)
+        val f1 = mixf(13f, 15f, item.sf)
+        val f2 = mixf(11.5f, 12.5f, item.sf)
+        val textW = max(item.w - (24f + icon) - 12f, 4f)
+        val (title, subtitle) = texts.getOrElse(i) { "" to "" }
         Box(
             Modifier
                 .offset(item.x.dp, item.y.dp)
@@ -509,9 +532,19 @@ private fun CueComponents(frame: CueFrame, accent: Color, surface: Color?, dark:
                 .graphicsLayer { alpha = item.a }
                 .background(lerp(cardBg, fullBg, item.sf), RoundedCornerShape(14.dp)),
         ) {
-            Box(Modifier.offset(12.dp, ((item.h - icon) / 2f).dp).size(icon.dp).background(lerp(cardBar, accent.copy(alpha = 0.95f), item.sf), CircleShape))
-            Box(Modifier.offset((24f + icon).dp, (item.h / 2f - 10f).dp).size((item.w * 0.45f).dp, 7.dp).background(lerp(cardBar, fullBar, item.sf), RoundedCornerShape(3.5.dp)))
-            Box(Modifier.offset((24f + icon).dp, (item.h / 2f + 3f).dp).size((item.w * 0.28f).dp, 6.dp).background(lerp(cardBar2, fullBar2, item.sf), RoundedCornerShape(3.dp)))
+            Box(
+                Modifier.offset(12.dp, ((item.h - icon) / 2f).dp).size(icon.dp)
+                    .background(lerp(cardIcon, accent.copy(alpha = 0.95f), item.sf), CircleShape),
+                contentAlignment = Alignment.Center,
+            ) {
+                BasicText("✦", style = TextStyle(color = lerp(accent, Color.White, item.sf), fontSize = (icon * 0.5f).sp))
+            }
+            Column(Modifier.offset((24f + icon).dp, 0.dp).width(textW.dp).fillMaxHeight(), verticalArrangement = Arrangement.Center) {
+                BasicText(title, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    style = TextStyle(color = lerp(cardT1, fullT1, item.sf), fontSize = f1.sp, fontWeight = FontWeight.SemiBold))
+                BasicText(subtitle, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    style = TextStyle(color = lerp(cardT2, fullT2, item.sf), fontSize = f2.sp))
+            }
         }
     }
 }
@@ -581,6 +614,26 @@ float sdRound(float2 p, float2 b, float r) {
     return length(max(q, float2(0.0))) + min(max(q.x, q.y), 0.0) - r;
 }
 float hash12(float2 p) { return fract(sin(dot(p, float2(127.1, 311.7))) * 43758.5453); }
+float vnoise(float2 p) {
+    float2 i = floor(p);
+    float2 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    float a = hash12(i);
+    float b = hash12(i + float2(1.0, 0.0));
+    float c = hash12(i + float2(0.0, 1.0));
+    float d = hash12(i + float2(1.0, 1.0));
+    return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+}
+float fbm(float2 p) {
+    float v = 0.0;
+    float amp = 0.5;
+    for (int i = 0; i < 5; i++) {
+        v += amp * vnoise(p);
+        p = p * 2.03 + float2(17.1, 9.2);
+        amp *= 0.5;
+    }
+    return v;
+}
 float3 oklabToSrgb(float3 c) {
     float l_ = c.x + 0.3963377774 * c.y + 0.2158037573 * c.z;
     float m_ = c.x - 0.1055613458 * c.y - 0.0638541728 * c.z;
@@ -604,10 +657,10 @@ float3 ramp(float g) {
 }
 
 // Material: Soft Glow
-float3 material(float3 n, float g, float2 fc, float2 p) {
+float4 material(float3 n, float g, float2 fc, float2 p, float s) {
     float3 c = ramp(g);
     float rim = pow(1.0 - n.z, 3.0) * uP.y;
-    return mix(c, ramp(1.0) + 0.08, clamp(rim, 0.0, 1.0));
+    return float4(mix(c, ramp(1.0) + 0.08, clamp(rim, 0.0, 1.0)), 1.0);
 }
 
 float4 over(float4 src, float4 dst) { return src + dst * (1.0 - src.a); }
@@ -641,7 +694,8 @@ float4 cue(float2 fc) {
     float gEdge = 0.1 + 0.75 * (0.5 + 0.5 * sin(atan(lp.y, lp.x) * 2.0 + uTime * 0.9));
     g = mix(gEdge, g, uFill);
 
-    float3 col = material(n, g, fc, p);
+    float4 mc = material(n, g, fc, p, s);
+    float3 col = mc.rgb;
     float3 axis = float3(sin(uPhase) * 0.7071, -sin(uPhase) * 0.7071, cos(uPhase));
     float lit = smoothstep(-0.06, 0.06, dot(n, axis));
     col = mix(col, mix(uNeutral, col, lit), uPhaseAmt);
@@ -651,7 +705,7 @@ float4 cue(float2 fc) {
     float w = 1.0 / uScale + uEdgeSoft;
     float cov = clamp(0.5 - d / w, 0.0, 1.0);
     float inner = mix(exp(-s / max(uGlowW, 1.0)), 1.0, uFill);
-    float a = cov * inner * uOpacity;
+    float a = cov * inner * uOpacity * mc.a;
 
     float glowR = 14.0 + 22.0 * uGlow;
     float ga = exp(-max(d, 0.0) / glowR) * uGlow * 0.55 * (1.0 - cov) * uOpacity;
