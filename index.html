@@ -1,0 +1,1677 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="AI 비주얼 큐의 컬러·물성·크기·모션을 조절하고 Kotlin + Jetpack Compose 코드로 내보내는 디자인 툴">
+<style>*,*::before,*::after{box-sizing:border-box}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.5 system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>AI Visual Cue Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap">
+<style>
+/* Layout: top bar, then a split workspace — controls (1/3) | stage (2/3). The stage is a quiet neutral room so the cue carries all the color. */
+:root{
+  --bg:#E9EBF0; --panel:#F8F9FB; --raise:#FFFFFF; --line:#D6DAE2; --line-soft:#E4E7ED;
+  --ink:#14161B; --muted:#5F6573; --faint:#8D93A1; --accent:#2F4BE8; --accent-ink:#FFFFFF; --stage:#DFE2E8;
+  --focus:#2F4BE8; --danger:#C2362B;
+  --k-kw:#7A35D8; --k-str:#0A7558; --k-num:#B04E14; --k-com:#8A90A0; --k-type:#1F4FD0; --k-ann:#A2338A;
+  --f-ui:"IBM Plex Sans KR","Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --r-s:6px; --r-m:10px;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0B0C10; --panel:#111217; --raise:#171920; --line:#262933; --line-soft:#1D2028;
+  --ink:#E6E8EE; --muted:#9298A8; --faint:#646A7A; --accent:#8B9BFF; --accent-ink:#0B0C10; --stage:#0E0F14;
+  --focus:#8B9BFF; --danger:#FF7A6E;
+  --k-kw:#C59BFF; --k-str:#6FD6AE; --k-num:#F2A46B; --k-com:#6C7283; --k-type:#8FB0FF; --k-ann:#F28BD6;
+  color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#0B0C10; --panel:#111217; --raise:#171920; --line:#262933; --line-soft:#1D2028;
+  --ink:#E6E8EE; --muted:#9298A8; --faint:#646A7A; --accent:#8B9BFF; --accent-ink:#0B0C10; --stage:#0E0F14;
+  --focus:#8B9BFF; --danger:#FF7A6E;
+  --k-kw:#C59BFF; --k-str:#6FD6AE; --k-num:#F2A46B; --k-com:#6C7283; --k-type:#8FB0FF; --k-ann:#F28BD6;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-ui);font-size:13px;line-height:1.45;display:flex;flex-direction:column;overflow:hidden}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+
+/* ---------- top bar ---------- */
+.topbar{flex:none;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;height:52px;border-bottom:1px solid var(--line);background:var(--panel);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.brand{display:flex;align-items:center;gap:10px;font-weight:600;font-size:14px;letter-spacing:-.01em;min-width:0}
+.brand-mark{width:18px;height:18px;border-radius:50%;flex:none;background:radial-gradient(circle at 50% 32%,#6449F5 0%,#3A77FF 45%,#C9EEFF 100%)}
+.brand small{font-family:var(--f-mono);font-weight:400;font-size:11px;color:var(--faint)}
+.tabs{display:flex;gap:2px;padding:3px;border-radius:999px;background:var(--bg);border:1px solid var(--line)}
+.tab{border:0;background:none;padding:6px 16px;border-radius:999px;cursor:pointer;color:var(--muted);font-weight:500;white-space:nowrap}
+.tab[aria-selected="true"]{background:var(--raise);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.theme-btn{justify-self:end;width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:var(--raise);cursor:pointer;display:grid;place-items:center;font-size:16px;line-height:1}
+
+/* ---------- workspace ---------- */
+.workspace{flex:1;min-height:0;display:grid;grid-template-columns:minmax(340px,1fr) 2fr}
+.panel{min-height:0;display:flex;flex-direction:column;border-right:1px solid var(--line);background:var(--panel);min-width:0}
+.subtabs{flex:none;display:flex;gap:18px;padding:0 20px;border-bottom:1px solid var(--line)}
+.subtab{border:0;background:none;padding:12px 0 10px;cursor:pointer;color:var(--muted);font-weight:500;border-bottom:2px solid transparent;margin-bottom:-1px}
+.subtab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--ink)}
+.pane{flex:1;min-height:0;overflow:auto}
+.pane-design{padding:4px 20px 40px}
+.sec{padding:18px 0;border-bottom:1px solid var(--line-soft);display:flex;flex-direction:column;gap:12px}
+.sec:last-child{border-bottom:0}
+.sec-h{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.sec-h h3{margin:0;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.sec-h .hint{font-size:11px;color:var(--faint)}
+.link-btn{border:0;background:none;color:var(--accent);cursor:pointer;font-size:12px;padding:2px 0}
+
+.presets{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.preset{border:1px solid var(--line);background:var(--raise);border-radius:var(--r-m);padding:6px;cursor:pointer;display:flex;flex-direction:column;gap:6px;text-align:left}
+.preset .sw{height:28px;border-radius:6px}
+.preset span{font-size:11px;color:var(--muted);padding:0 2px}
+.preset[aria-pressed="true"]{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+
+/* gradient editor — rail + swatches, after the reference */
+.grad{position:relative;height:210px;border-radius:var(--r-m);overflow:hidden;touch-action:none;user-select:none}
+.grad-rail{position:absolute;left:30px;top:18px;bottom:18px;width:1px;background:rgba(255,255,255,.85)}
+.stop{position:absolute;left:21px;transform:translateY(-50%);display:flex;align-items:center;gap:10px;cursor:grab;border:0;background:none;padding:0;text-align:left}
+.stop:active{cursor:grabbing}
+.stop .sq{width:18px;height:18px;border:1.5px solid #fff;flex:none;box-shadow:0 0 0 1px rgba(0,0,0,.08)}
+.stop .lb{display:flex;flex-direction:column;line-height:1.15;font-size:12px;font-weight:600;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.18)}
+.stop .lb i{font-style:normal;font-family:var(--f-mono);font-weight:400;font-size:11px;opacity:.9}
+.stop.dark-label .lb{color:#1B1D24;text-shadow:none}
+.stop.dark-label .sq{border-color:#1B1D24}
+.stop.sel .sq{outline:2px solid #fff;outline-offset:2px;box-shadow:0 0 0 4px rgba(0,0,0,.25)}
+.stop.dark-label.sel .sq{outline-color:#1B1D24}
+.grad-pos{position:absolute;right:12px;bottom:10px;font-family:var(--f-mono);font-size:11px;color:#fff;opacity:.85}
+.stop-edit{display:grid;grid-template-columns:40px 1fr 1fr auto;gap:8px;align-items:center}
+.stop-edit input[type=color]{width:40px;height:34px;padding:0;border:1px solid var(--line);border-radius:var(--r-s);background:var(--raise);cursor:pointer}
+.field{height:34px;border:1px solid var(--line);border-radius:var(--r-s);background:var(--raise);padding:0 10px;min-width:0;width:100%}
+.field.mono{font-size:12px;text-transform:uppercase}
+.icon-btn{height:34px;min-width:34px;border:1px solid var(--line);border-radius:var(--r-s);background:var(--raise);cursor:pointer;padding:0 10px;white-space:nowrap}
+.icon-btn:disabled{opacity:.4;cursor:not-allowed}
+.icon-btn.danger{color:var(--danger)}
+
+.seg{display:flex;padding:2px;border:1px solid var(--line);border-radius:var(--r-s);background:var(--bg)}
+.seg button{flex:1;border:0;background:none;padding:6px 8px;border-radius:4px;cursor:pointer;color:var(--muted);white-space:nowrap}
+.seg button[aria-pressed="true"]{background:var(--raise);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.row-label{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--muted)}
+.row-label output{font-family:var(--f-mono);color:var(--ink);font-size:12px}
+.ctrl{display:flex;flex-direction:column;gap:6px}
+.ctrl-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 16px}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:18px;background:none;margin:0;cursor:pointer}
+input[type=range]::-webkit-slider-runnable-track{height:3px;border-radius:3px;background:linear-gradient(var(--ink),var(--ink)) 0/var(--p,50%) 100% no-repeat,var(--line)}
+input[type=range]::-moz-range-track{height:3px;border-radius:3px;background:var(--line)}
+input[type=range]::-moz-range-progress{height:3px;border-radius:3px;background:var(--ink)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--raise);border:1.5px solid var(--ink);margin-top:-5.5px}
+input[type=range]::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:var(--raise);border:1.5px solid var(--ink)}
+
+.mats{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.mat{border:1px solid var(--line);background:var(--raise);border-radius:var(--r-m);padding:6px 4px 8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0}
+.mat img{width:100%;max-width:64px;aspect-ratio:1;border-radius:8px;display:block}
+.mat span{font-size:11px;color:var(--muted);text-align:center;line-height:1.2}
+.mat[aria-pressed="true"]{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.mat[aria-pressed="true"] span{color:var(--ink)}
+.mat-desc{font-size:12px;color:var(--muted);margin:0}
+
+/* code pane */
+.pane-code{display:flex;flex-direction:column}
+.code-bar{flex:none;display:flex;gap:8px;align-items:center;padding:12px 20px;border-bottom:1px solid var(--line-soft);flex-wrap:wrap}
+.code-bar .seg{flex:0 1 auto}
+.code-bar .spacer{flex:1}
+.copy-btn{height:32px;padding:0 14px;border-radius:var(--r-s);border:0;background:var(--ink);color:var(--bg);cursor:pointer;font-weight:500}
+.code-meta{flex:none;padding:10px 20px;font-size:11.5px;color:var(--muted);border-bottom:1px solid var(--line-soft);display:flex;flex-direction:column;gap:2px}
+.code-meta b{color:var(--ink);font-weight:500}
+.code-wrap{flex:1;min-height:0;overflow:auto;background:var(--raise)}
+pre.code{margin:0;padding:16px 20px 40px;font-family:var(--f-mono);font-size:11.5px;line-height:1.6;white-space:pre;tab-size:4;color:var(--ink)}
+.t-kw{color:var(--k-kw)} .t-str{color:var(--k-str)} .t-num{color:var(--k-num)} .t-com{color:var(--k-com);font-style:italic} .t-type{color:var(--k-type)} .t-ann{color:var(--k-ann)}
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(8px);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:999px;font-size:12px;opacity:0;pointer-events:none;transition:opacity .18s,transform .18s;z-index:20}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ---------- stage ---------- */
+.stage{min-width:0;min-height:0;display:flex;flex-direction:column;background:var(--stage)}
+.stage-head{flex:none;display:flex;align-items:center;gap:12px;padding:12px max(16px,env(safe-area-inset-right,0px)) 0 20px}
+.stage-title{display:flex;align-items:baseline;gap:10px;min-width:0}
+.stage-title b{font-weight:600;font-size:14px}
+.stage-title span{color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stage-head .spacer{flex:1}
+.nav-btn{width:32px;height:32px;border-radius:50%;border:1px solid var(--line);background:var(--raise);cursor:pointer;display:grid;place-items:center;font-size:14px}
+.dots{display:flex;gap:6px}
+.dots button{width:8px;height:8px;border-radius:50%;border:0;padding:0;background:var(--line);cursor:pointer}
+.dots button[aria-current="true"]{background:var(--ink);width:20px;border-radius:4px}
+.stage-body{flex:1;min-height:0;position:relative;display:flex;align-items:center;justify-content:center;touch-action:pan-y;cursor:grab;overflow:hidden}
+.stage-body.dragging{cursor:grabbing}
+.frames{display:flex;gap:28px;align-items:flex-start;transition:transform .35s cubic-bezier(.2,0,0,1),opacity .25s}
+.frame-col{display:flex;flex-direction:column;align-items:center;gap:10px}
+.device{position:relative;overflow:hidden;border-radius:30px;box-shadow:0 0 0 1px var(--line),0 18px 50px -24px rgba(10,14,40,.35);background:#000;isolation:isolate}
+.device canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.comp{position:absolute;inset:0;pointer-events:none}
+.comp .item{position:absolute;left:0;top:0;border-radius:14px;background:rgba(255,255,255,.22);will-change:transform,opacity}
+.comp .item::before{content:"";position:absolute;left:12px;top:50%;width:var(--ic);height:var(--ic);margin-top:calc(var(--ic) / -2);border-radius:50%;background:rgba(255,255,255,.88)}
+.comp .item::after{content:"";position:absolute;left:calc(24px + var(--ic));top:calc(50% - 10px);width:45%;height:7px;border-radius:4px;background:rgba(255,255,255,.88);box-shadow:0 13px 0 -1px rgba(255,255,255,.55)}
+.hud{position:absolute;inset:0;pointer-events:none;font-family:var(--f-ui);color:var(--hud,#6b7080)}
+.hud span{position:absolute;font-weight:600}
+.cap{font-size:12px;color:var(--muted);display:flex;gap:8px;align-items:center}
+.cap b{color:var(--ink);font-weight:500}
+.gl-error{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:24px;color:#fff;font-size:13px;background:#222}
+
+.transport{flex:none;display:flex;align-items:center;gap:14px;padding:10px max(16px,env(safe-area-inset-right,0px)) 14px 20px;flex-wrap:wrap}
+.play{width:36px;height:36px;border-radius:50%;border:0;background:var(--ink);color:var(--bg);cursor:pointer;display:grid;place-items:center;flex:none}
+.scrub{flex:1;min-width:160px;display:flex;flex-direction:column;gap:4px}
+.lanes{position:relative;height:16px}
+.lane{position:absolute;top:0;height:16px;border-radius:3px;font-size:10px;line-height:16px;padding-left:5px;color:var(--muted);overflow:hidden;white-space:nowrap;background:var(--line-soft);border-left:1px solid var(--stage)}
+.lane.on{background:var(--ink);color:var(--bg)}
+.tclock{font-family:var(--f-mono);font-size:12px;color:var(--muted);min-width:96px;text-align:right}
+.levels{display:flex;gap:4px}
+.levels button{border:1px solid var(--line);background:var(--raise);border-radius:999px;padding:4px 10px;cursor:pointer;font-family:var(--f-mono);font-size:11px;color:var(--muted)}
+.levels button[aria-current="true"]{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+
+/* about */
+.about{flex:1;min-height:0;overflow:auto;padding-block:40px 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.about-in{max-width:680px;margin:0 auto;display:flex;flex-direction:column;gap:28px}
+.about h1{font-size:28px;font-weight:600;letter-spacing:-.02em;margin:0;text-wrap:balance}
+.about h2{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 10px;font-weight:600}
+.about p,.about li{font-size:14px;line-height:1.7;color:var(--ink)}
+.about p{margin:0}
+.about ol,.about ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px}
+.about .lead{font-size:16px;color:var(--muted)}
+.spec-table{width:100%;border-collapse:collapse;font-size:13px}
+.spec-table td{padding:8px 0;border-bottom:1px solid var(--line-soft);vertical-align:top}
+.spec-table td:first-child{color:var(--muted);width:38%}
+.pal-row{display:flex;gap:8px;flex-wrap:wrap}
+.pal-row span{display:inline-flex;align-items:center;gap:6px;font-family:var(--f-mono);font-size:12px}
+.pal-row i{width:14px;height:14px;display:inline-block}
+
+@media (max-width:900px){
+  body{overflow:auto;height:auto}
+  .topbar{grid-template-columns:auto 1fr auto;gap:8px}
+  .brand small{display:none}
+  .tabs{justify-self:center}
+  .tab{padding:6px 10px}
+  .workspace{display:flex;flex-direction:column-reverse}
+  .panel{border-right:0;border-top:1px solid var(--line)}
+  .pane{overflow:visible}
+  .code-wrap{max-height:70vh}
+  .stage{height:78vh;min-height:520px}
+  .pane-design{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+}
+@media (max-width:480px){
+  .brand span{display:none}
+  .mats{grid-template-columns:repeat(3,1fr)}
+  .ctrl-grid{grid-template-columns:1fr}
+  .levels{display:none}
+  .stage-title span{display:none}
+  .stage-title b{white-space:nowrap;font-size:13px}
+  .stage-head{gap:8px}
+}
+@media (prefers-reduced-motion: reduce){ .frames{transition:none} }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand"><i class="brand-mark" aria-hidden="true"></i><span>AI Visual Cue Studio</span><small>v0.1</small></div>
+  <nav class="tabs" role="tablist" aria-label="메인 탭">
+    <button class="tab" role="tab" id="tab-btn-cue" aria-selected="true" aria-controls="view-cue">AI Visual Cue</button>
+    <button class="tab" role="tab" id="tab-btn-about" aria-selected="false" aria-controls="view-about">About</button>
+  </nav>
+  <button class="theme-btn" id="themeBtn" type="button" aria-label="다크 모드로 전환" title="테마 전환">☾</button>
+</header>
+
+<main class="workspace" id="view-cue" role="tabpanel" aria-labelledby="tab-btn-cue">
+  <aside class="panel" aria-label="컨트롤 패널">
+    <div class="subtabs" role="tablist" aria-label="패널">
+      <button class="subtab" role="tab" id="sub-design" aria-selected="true">Design</button>
+      <button class="subtab" role="tab" id="sub-code" aria-selected="false">Code</button>
+    </div>
+
+    <div class="pane pane-design" id="paneDesign">
+      <section class="sec" aria-labelledby="h-color">
+        <div class="sec-h"><h3 id="h-color">컬러</h3><span class="hint">스톱 최대 3개 · 칩을 위아래로 드래그</span></div>
+        <div class="presets" id="presets"></div>
+        <div class="grad" id="grad"><div class="grad-rail"></div><span class="grad-pos" id="gradPos"></span></div>
+        <div class="stop-edit">
+          <input type="color" id="stopColor" aria-label="스톱 색상">
+          <input class="field mono" id="stopHex" aria-label="HEX" maxlength="7" spellcheck="false">
+          <input class="field" id="stopName" aria-label="스톱 이름" maxlength="16" placeholder="이름">
+          <button class="icon-btn danger" id="stopDel" type="button" title="스톱 삭제">삭제</button>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="icon-btn" id="stopAdd" type="button">+ 스톱 추가</button>
+          <div class="seg" id="gradType" role="group" aria-label="그라데이션 종류" style="flex:1">
+            <button type="button" data-v="radial">방사형</button><button type="button" data-v="linear">선형</button>
+          </div>
+        </div>
+        <div class="ctrl-grid" id="colorCtrls"></div>
+      </section>
+
+      <section class="sec" aria-labelledby="h-mat">
+        <div class="sec-h"><h3 id="h-mat">물성</h3><span class="hint" id="matHint"></span></div>
+        <div class="mats" id="mats"></div>
+        <p class="mat-desc" id="matDesc"></p>
+        <div class="ctrl-grid" id="matCtrls"></div>
+      </section>
+
+      <section class="sec" aria-labelledby="h-size">
+        <div class="sec-h"><h3 id="h-size">크기</h3><span class="hint">단위 dp · 화면 360 × 780</span></div>
+        <div class="ctrl-grid" id="sizeCtrls"></div>
+      </section>
+
+      <section class="sec" aria-labelledby="h-motion">
+        <div class="sec-h"><h3 id="h-motion">모션</h3><span class="hint" id="loopHint"></span></div>
+        <div class="ctrl"><div class="row-label"><span>전환 방식</span></div>
+          <div class="seg" id="transStyle" role="group" aria-label="전환 방식"><button type="button" data-v="morph">모프</button><button type="button" data-v="phase">위상 회전</button></div></div>
+        <div class="ctrl"><div class="row-label"><span>이징</span><output class="mono" id="easeOut"></output></div>
+          <div class="seg" id="easing" role="group" aria-label="이징"><button type="button" data-v="reference">레퍼런스</button><button type="button" data-v="standard">표준</button><button type="button" data-v="spring">탄성</button></div></div>
+        <div class="ctrl-grid" id="motionCtrls"></div>
+      </section>
+
+      <section class="sec" aria-labelledby="h-shadow">
+        <div class="sec-h"><h3 id="h-shadow">그림자</h3><button class="link-btn" id="resetAll" type="button">전체 기본값으로</button></div>
+        <div class="ctrl-grid" id="shadowCtrls"></div>
+      </section>
+    </div>
+
+    <div class="pane pane-code" id="paneCode" hidden>
+      <div class="code-bar">
+        <div class="seg" id="codeMode" role="group" aria-label="코드 종류">
+          <button type="button" data-v="kotlin">Kotlin</button><button type="button" data-v="agsl">AGSL</button><button type="button" data-v="json">Spec JSON</button>
+        </div>
+        <span class="spacer"></span>
+        <button class="copy-btn" id="copyBtn" type="button">복사</button>
+      </div>
+      <div class="code-meta" id="codeMeta"></div>
+      <div class="code-wrap"><pre class="code" id="codeOut"></pre></div>
+    </div>
+  </aside>
+
+  <section class="stage" aria-label="프리뷰">
+    <div class="stage-head">
+      <button class="nav-btn" id="prevView" type="button" aria-label="이전 뷰">←</button>
+      <div class="stage-title"><b id="viewName"></b><span id="viewDesc"></span></div>
+      <span class="spacer"></span>
+      <div class="dots" id="dots" aria-label="뷰 선택"></div>
+      <button class="nav-btn" id="nextView" type="button" aria-label="다음 뷰">→</button>
+    </div>
+    <div class="stage-body" id="stageBody">
+      <div class="frames" id="frames">
+        <div class="frame-col" id="colA">
+          <div class="device" id="devA">
+            <canvas id="bgA" aria-hidden="true"></canvas>
+            <canvas id="glA" aria-label="비주얼 큐 단독 프리뷰"></canvas>
+            <div class="comp" id="compA"></div>
+            <div class="hud" id="hudA"><span data-k="tl">AI Visual Cue</span><span data-k="tr">360 × 780 dp</span><span data-k="bl">L1 / 3</span><span data-k="br">대기</span></div>
+          </div>
+          <div class="cap"><b>① 비주얼 큐</b><span>물성 · 모션</span></div>
+        </div>
+        <div class="frame-col" id="colB">
+          <div class="device" id="devB">
+            <canvas id="bgB" aria-hidden="true"></canvas>
+            <canvas id="glB" aria-label="앱 적용 프리뷰"></canvas>
+            <div class="comp" id="compB"></div>
+          </div>
+          <div class="cap"><b>② 앱 적용</b><span>실제 화면 위</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="transport">
+      <button class="play" id="playBtn" type="button" aria-label="일시정지">❚❚</button>
+      <div class="scrub">
+        <div class="lanes" id="lanes" aria-hidden="true"></div>
+        <input type="range" id="scrub" min="0" max="1000" step="1" value="0" aria-label="타임라인">
+      </div>
+      <span class="tclock" id="tclock">0.00 / 0.00s</span>
+      <div class="levels" id="levels" aria-label="레벨로 이동">
+        <button type="button" data-l="1">L1</button><button type="button" data-l="2">L2</button><button type="button" data-l="3">L3</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<main class="about" id="view-about" role="tabpanel" aria-labelledby="tab-btn-about" hidden>
+  <div class="about-in">
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <h1>AI Visual Cue Studio</h1>
+      <p class="lead">AI 에이전트가 깨어날 때 화면에 나타나는 비주얼 큐를 조절하고, 같은 값을 그대로 쓰는 Jetpack Compose 코드로 내보내는 도구입니다.</p>
+    </div>
+    <div>
+      <h2>사용 방법</h2>
+      <ol>
+        <li>Design 탭에서 컬러(그라데이션 스톱 최대 3개), 물성, 크기, 모션을 조절합니다. 프리뷰는 바로 바뀝니다.</li>
+        <li>프리뷰는 3개 뷰로 볼 수 있습니다. 좌우 화살표, 키보드 ←/→, 드래그로 넘깁니다. 스페이스바로 재생을 멈춥니다.</li>
+        <li>Code 탭에서 Kotlin 파일 전체를 복사해 Android 프로젝트에 붙여넣고 <span class="mono">AiVisualCueDemoLoop()</span> 또는 <span class="mono">AiVisualCue(level)</span>을 호출합니다.</li>
+      </ol>
+    </div>
+    <div>
+      <h2>한 사이클</h2>
+      <table class="spec-table"><tbody>
+        <tr><td>나타남 · 대기</td><td>화면 상단에 납작한 상태로 서서히 나타남</td></tr>
+        <tr><td>L1 · 떠오름 · 부유</td><td>구로 부풀어 떠오르고 그림자가 생김. 천천히 위아래로 떠다님</td></tr>
+        <tr><td>L2 · 확산 · 안착</td><td>넓게 퍼지며 카드로 내려앉고, 그 자리에서 리스트 3줄이 차례로 생성</td></tr>
+        <tr><td>L3 · 전체 화면</td><td>화면 전체로 확산되어 가장자리 글로우만 남음</td></tr>
+        <tr><td>수축 · 사라짐</td><td>상단으로 줄어들며 완전히 사라졌다가, 납작한 상태로 다시 나타나며 무한 반복</td></tr>
+      </tbody></table>
+    </div>
+    <div>
+      <h2>출력 코드</h2>
+      <table class="spec-table"><tbody>
+        <tr><td>언어</td><td>Kotlin + Jetpack Compose, 단일 파일, 추가 라이브러리 없음</td></tr>
+        <tr><td>minSdk</td><td>26</td></tr>
+        <tr><td>Android 13 (API 33) 이상</td><td>AGSL RuntimeShader로 프리뷰와 같은 셰이더 사용</td></tr>
+        <tr><td>API 26 – 32</td><td>그라데이션 Brush와 그림자로 근사하는 대체 경로</td></tr>
+        <tr><td>동기화 방식</td><td>웹 프리뷰 셰이더와 AGSL은 같은 소스에서 만들어지고, 타이밍과 이징 값도 같은 숫자를 씁니다</td></tr>
+      </tbody></table>
+    </div>
+    <div>
+      <h2>기본 팔레트</h2>
+      <p style="color:var(--muted);margin-bottom:10px">레퍼런스 영상에서 추출한 3스톱 팔레트입니다.</p>
+      <div style="display:flex;flex-direction:column;gap:8px" id="aboutPalettes"></div>
+    </div>
+    <p style="color:var(--faint);font-size:12px">v0.1 · 물성 5종(소프트 글로우, 프로스티드 글래스, 리퀴드 메탈, 펄, 매트 클레이)은 임시 정의입니다.</p>
+  </div>
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+"use strict";
+/* ======================================================================
+   1. Spec (single source of truth)
+   ====================================================================== */
+const PRESETS = {
+  azure:   { name:'Azure',   stops:[{color:'#6449F5',pos:0,name:'Iris'},{color:'#3A77FF',pos:0.40,name:'Azure'},{color:'#C9EEFF',pos:1,name:'Mist'}] },
+  blossom: { name:'Blossom', stops:[{color:'#7B72EE',pos:0,name:'Lilac'},{color:'#E68FF0',pos:0.80,name:'Orchid'},{color:'#FFDCE9',pos:1,name:'Blush'}] },
+  indigo:  { name:'Indigo',  stops:[{color:'#5439D6',pos:0,name:'Indigo'},{color:'#3873F0',pos:0.62,name:'Azure'},{color:'#E8C9FF',pos:1,name:'Bloom'}] },
+};
+const MAT_KEYS = ['softGlow','frostedGlass','liquidMetal','pearl','matteClay'];
+const MATS = {
+  softGlow:     { name:'소프트 글로우', en:'Soft Glow', desc:'매트한 그라데이션 볼륨에 밝은 하단 림과 부드러운 외곽 번짐. 레퍼런스 영상의 기본 질감.',
+                  params:[['외곽 글로우',0,1,0.01],['림 라이트',0,1,0.01],['가장자리 부드러움',0,4,0.1]], def:[0.35,0.5,0.8,0] },
+  frostedGlass: { name:'프로스티드 글래스', en:'Frosted Glass', desc:'반투명 유리. 뒤 화면이 흐리게 굴절되어 보이고 테두리에 프레넬 반사.',
+                  params:[['굴절',0,1,0.01],['서리(블러)',0,1,0.01],['색 농도',0,1,0.01],['프레넬',0,1,0.01]], def:[0.5,0.45,0.45,0.6] },
+  liquidMetal:  { name:'리퀴드 메탈', en:'Liquid Metal', desc:'크롬처럼 그라데이션이 반사 띠로 흐르고 강한 하이라이트가 맺힘.',
+                  params:[['반사 띠 강도',0,1,0.01],['하이라이트 크기',0,1,0.01],['띠 개수',1,6,0.1]], def:[0.7,0.4,3,0] },
+  pearl:        { name:'펄', en:'Pearl', desc:'보는 각도에 따라 무지갯빛이 도는 진주 광택.',
+                  params:[['무지갯빛',0,1,0.01],['광택',0,1,0.01],['색상 이동',0,1,0.01]], def:[0.6,0.5,0,0] },
+  matteClay:    { name:'매트 클레이', en:'Matte Clay', desc:'무광 점토. 미세 입자감과 가장자리 음영.',
+                  params:[['입자감',0,1,0.01],['밝기',0,1,0.01],['가장자리 음영',0,1,0.01]], def:[0.5,0.5,0.6,0] },
+};
+const EASINGS = { reference:[0.6,0,0.1,1], standard:[0.2,0,0,1], spring:[0.34,1.36,0.64,1] };
+
+function defaultSpec(){
+  return {
+    version:1,
+    stops: PRESETS.azure.stops.map(s=>({...s})), preset:'azure', gradType:'radial', angle:90, hlX:0, hlY:-0.3,
+    material:'softGlow', matParams:Object.fromEntries(MAT_KEYS.map(k=>[k,[...MATS[k].def]])),
+    diameter:92, flatRatio:0.6, flatThick:4, cardH:220, cardThick:8, cardCorner:28, margin:16,
+    shadow:0.6, shadowBlur:18, shadowOff:14,
+    speed:1, transMs:800, flatHoldMs:500, l1Hold:2600, l2Hold:2600, l3Hold:2600, settleMs:350,
+    floatAmp:3, floatPeriod:2400, drift:0.6, stagger:60, transition:'morph', easing:'reference',
+  };
+}
+function loadSpec(){
+  const d = defaultSpec();
+  try{
+    const raw = localStorage.getItem('avc-spec-v1'); if(!raw) return d;
+    const o = JSON.parse(raw); if(!o || o.version!==1) return d;
+    const s = {...d, ...o, matParams:{...d.matParams, ...(o.matParams||{})}};
+    if(o.diameter===132) s.diameter = d.diameter;   // v0.1 default → new default (70%)
+    if(!Array.isArray(s.stops) || !s.stops.length || s.stops.length>3) s.stops = d.stops;
+    if(!MATS[s.material]) s.material = d.material;
+    if(!EASINGS[s.easing]) s.easing = d.easing;
+    return s;
+  }catch(e){ return d; }
+}
+let S = loadSpec();
+let saveTimer = 0;
+function saveSpec(){ clearTimeout(saveTimer); saveTimer = setTimeout(()=>{ try{ localStorage.setItem('avc-spec-v1', JSON.stringify(S)); }catch(e){} }, 250); }
+
+/* ======================================================================
+   2. Math helpers (shared logic mirrored in the generated Kotlin)
+   ====================================================================== */
+const clamp01 = x => x<0?0:x>1?1:x;
+const lerp = (a,b,t) => a+(b-a)*t;
+function cubicBezier(x1,y1,x2,y2){
+  const cx=3*x1, bx=3*(x2-x1)-cx, ax=1-cx-bx, cy=3*y1, by=3*(y2-y1)-cy, ay=1-cy-by;
+  const sx=t=>((ax*t+bx)*t+cx)*t, sy=t=>((ay*t+by)*t+cy)*t, dx=t=>(3*ax*t+2*bx)*t+cx;
+  return x=>{
+    if(x<=0) return 0; if(x>=1) return 1;
+    let t=x;
+    for(let i=0;i<8;i++){ const e=sx(t)-x; if(Math.abs(e)<1e-6) return sy(t); const d=dx(t); if(Math.abs(d)<1e-6) break; t-=e/d; }
+    let lo=0, hi=1; t=x;
+    for(let i=0;i<40;i++){ const v=sx(t); if(Math.abs(v-x)<1e-6) break; if(x>v) lo=t; else hi=t; t=(lo+hi)/2; }
+    return sy(t);
+  };
+}
+function hexToRgb(h){ const n=parseInt(h.slice(1),16); return [(n>>16&255)/255,(n>>8&255)/255,(n&255)/255]; }
+function srgbToOklab(rgb){
+  const f=c=>c<=0.04045?c/12.92:Math.pow((c+0.055)/1.055,2.4);
+  const r=f(rgb[0]), g=f(rgb[1]), b=f(rgb[2]);
+  const l=Math.cbrt(0.4122214708*r+0.5363325363*g+0.0514459929*b);
+  const m=Math.cbrt(0.2119034982*r+0.6806995451*g+0.1073969566*b);
+  const s=Math.cbrt(0.0883024619*r+0.2817188376*g+0.6299787005*b);
+  return [0.2104542553*l+0.7936177850*m-0.0040720468*s, 1.9779984951*l-2.4285922050*m+0.4505937099*s, 0.0259040371*l+0.7827717662*m-0.8086757660*s];
+}
+function luminance(hex){ const [r,g,b]=hexToRgb(hex); return 0.2126*r+0.7152*g+0.0722*b; }
+const sortedStops = () => [...S.stops].sort((a,b)=>a.pos-b.pos);
+function stopUniforms(){
+  const st = sortedStops();
+  const lab = [0,1,2].map(i=>srgbToOklab(hexToRgb(st[Math.min(i,st.length-1)].color)));
+  const p0 = st[0].pos, p1 = Math.max((st[1]||st[st.length-1]).pos, p0+0.01), p2 = Math.max((st[2]||st[st.length-1]).pos, p1+0.01);
+  return { lab, pos:[p0,p1,p2], count:st.length };
+}
+
+/* ======================================================================
+   3. Poses + timeline  (mirrored 1:1 in the generated Kotlin)
+   ====================================================================== */
+const SCREEN = { w:360, h:780 };
+const TOP_INSET = 40, BOTTOM_INSET = 88;
+function makePoses(s, W, H){
+  const D = s.diameter, ft = s.flatThick;
+  const P = (cx,cy,hx,hy,r,elev,bevel,shadow,fill,scrim)=>({cx,cy,hx,hy,r,elev,bevel,shadow,fill,scrim});
+  return [
+    P(W/2, TOP_INSET+ft/2, D*s.flatRatio/2, ft/2, ft/2, 0, ft/2, 0, 1, 0),                               // 0 flat
+    P(W/2, TOP_INSET+12+D/2, D/2, D/2, D/2, 1, D/2, 1, 1, 0.06),                                         // 1 sphere (L1)
+    P(W/2, H-BOTTOM_INSET-s.cardH/2, W/2-s.margin, s.cardH/2, s.cardCorner, 0.3, s.cardThick, 0.18, 1, 0.14), // 2 card (L2)
+    P(W/2, H/2, W/2, H/2, 28, 0.12, 40, 0, 0, 0.3),                                                      // 3 full (L3)
+  ];
+}
+function buildTimeline(s){
+  const T = s.transMs;
+  const segs = [
+    {hold:true,  a:0,     dur:s.flatHoldMs, lv:1, name:'나타남', appear:true},
+    {hold:false, a:0,b:1, dur:T,            lv:1, name:'떠오름'},
+    {hold:true,  a:1,     dur:s.l1Hold,     lv:1, name:'부유', floating:true},
+    {hold:false, a:1,b:2, dur:T+s.settleMs, lv:2, name:'확산·안착'},
+    {hold:true,  a:2,     dur:s.l2Hold,     lv:2, name:'컴포넌트 생성', comps:true},
+    {hold:false, a:2,b:3, dur:T,            lv:3, name:'전체 확산'},
+    {hold:true,  a:3,     dur:s.l3Hold,     lv:3, name:'전체 화면', breathe:true},
+    {hold:false, a:3,b:0, dur:T,            lv:1, name:'수축·사라짐', vanish:true},
+  ];
+  let t=0; for(const g of segs){ g.t0=t; t+=g.dur; }
+  return { segs, len:t };
+}
+function interpPose(A,B,t,ez){
+  const e=ez(clamp01(t)), ex=ez(clamp01(t*1.15)), ey=ez(clamp01((t-0.12)/0.88)), es=ez(clamp01((t-0.15)/0.85));
+  return { cx:lerp(A.cx,B.cx,e), cy:lerp(A.cy,B.cy,e), hx:lerp(A.hx,B.hx,ex), hy:lerp(A.hy,B.hy,ey), r:lerp(A.r,B.r,e),
+           elev:lerp(A.elev,B.elev,e), bevel:lerp(A.bevel,B.bevel,e), shadow:lerp(A.shadow,B.shadow,es), fill:lerp(A.fill,B.fill,e), scrim:lerp(A.scrim,B.scrim,e) };
+}
+function sampleFrame(tMs){
+  const L = TL.len, t = ((tMs % L) + L) % L;
+  let g = TL.segs[0]; for(const s of TL.segs) if(s.t0<=t) g=s;
+  const local = t - g.t0, items=[0,0,0];
+  let glowW=28, phase=0, phaseAmt=0, opacity=1, pose;
+  if(g.appear) opacity = g.dur>0 ? clamp01((local-0.3*g.dur)/(0.7*g.dur)) : 1;
+  if(g.hold){
+    const p = POSES[g.a]; pose = {...p};
+    if(g.floating){
+      const env = clamp01(Math.min(local/400, (g.dur-local)/400));
+      const w = Math.sin(2*Math.PI*local/S.floatPeriod);
+      pose.cy += w*S.floatAmp*env; pose.shadow *= 1 - 0.15*w*env;
+    }
+    if(g.comps) for(let i=0;i<3;i++) items[i] = clamp01((local-120-i*S.stagger)/260) * clamp01((g.dur-local)/220);
+    if(g.breathe) glowW = 28*(1+0.15*Math.sin(2*Math.PI*local/2000));
+  } else {
+    const tl = clamp01(local/g.dur);
+    pose = interpPose(POSES[g.a], POSES[g.b], tl, EASE);
+    if(S.transition==='phase'){ phase = 2*Math.PI*EASE(tl); phaseAmt = Math.sin(Math.PI*tl); }
+    if(g.vanish) opacity = 1 - EASE(clamp01((tl-0.35)/0.65));
+  }
+  return { pose, level:g.lv, seg:g, items, glowW, phase, phaseAmt, opacity, t };
+}
+let EASE, POSES, TL;
+function rebuildMotion(){ EASE = cubicBezier(...EASINGS[S.easing]); POSES = makePoses(S, SCREEN.w, SCREEN.h); TL = buildTimeline(S); }
+rebuildMotion();
+
+/* ======================================================================
+   4. Shader — one source in a shared dialect (float2/3/4), emitted as
+      GLSL ES 3.0 for the web and AGSL for Android.
+   ====================================================================== */
+const UNIFORMS = [
+  ['float2','uRes'],['float','uScale'],['float2','uCenter'],['float2','uHalf'],['float','uRadius'],['float','uElev'],['float','uBevel'],
+  ['float','uShadow'],['float','uShadowBlur'],['float','uShadowOff'],['float','uFill'],['float','uGlowW'],['float','uGlow'],['float','uScrim'],
+  ['float','uPhase'],['float','uPhaseAmt'],['float2','uHl'],['float','uTime'],['float4','uP'],
+  ['float3','uC0'],['float3','uC1'],['float3','uC2'],['float3','uPos'],['float','uStopCount'],['float','uGradType'],['float2','uDir'],
+  ['float3','uNeutral'],['float','uEdgeSoft'],['float','uOpacity'],
+];
+const SH_COMMON = `
+float sdRound(float2 p, float2 b, float r) {
+    float2 q = abs(p) - b + float2(r);
+    return length(max(q, float2(0.0))) + min(max(q.x, q.y), 0.0) - r;
+}
+float hash12(float2 p) { return fract(sin(dot(p, float2(127.1, 311.7))) * 43758.5453); }
+float3 oklabToSrgb(float3 c) {
+    float l_ = c.x + 0.3963377774 * c.y + 0.2158037573 * c.z;
+    float m_ = c.x - 0.1055613458 * c.y - 0.0638541728 * c.z;
+    float s_ = c.x - 0.0894841775 * c.y - 1.2914855480 * c.z;
+    float l = l_ * l_ * l_;
+    float m = m_ * m_ * m_;
+    float s = s_ * s_ * s_;
+    float3 lin = float3( 4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+                        -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+                        -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s);
+    lin = clamp(lin, 0.0, 1.0);
+    float3 hi = 1.055 * pow(lin, float3(1.0 / 2.4)) - 0.055;
+    float3 lo = lin * 12.92;
+    return mix(lo, hi, step(float3(0.0031308), lin));
+}
+float3 ramp(float g) {
+    float3 c = uC0;
+    if (uStopCount > 1.5) { c = mix(uC0, uC1, smoothstep(uPos.x, uPos.y, g)); }
+    if (uStopCount > 2.5) { c = mix(c, uC2, smoothstep(uPos.y, uPos.z, g)); }
+    return oklabToSrgb(c);
+}
+`;
+const SH_MATS = {
+softGlow: `
+// Material: Soft Glow
+float3 material(float3 n, float g, float2 fc, float2 p) {
+    float3 c = ramp(g);
+    float rim = pow(1.0 - n.z, 3.0) * uP.y;
+    return mix(c, ramp(1.0) + 0.08, clamp(rim, 0.0, 1.0));
+}
+`,
+frostedGlass: `
+// Material: Frosted Glass
+float3 material(float3 n, float g, float2 fc, float2 p) {
+    float2 o = fc + n.xy * uP.x * 24.0 * uScale;
+    float r = (0.5 + uP.y * 10.0) * uScale;
+    float3 acc = sampleBg(o);
+    acc += sampleBg(o + float2(r, 0.0));
+    acc += sampleBg(o - float2(r, 0.0));
+    acc += sampleBg(o + float2(0.0, r));
+    acc += sampleBg(o - float2(0.0, r));
+    acc += sampleBg(o + float2(r, r) * 0.7071);
+    acc += sampleBg(o - float2(r, r) * 0.7071);
+    acc += sampleBg(o + float2(r, -r) * 0.7071);
+    acc += sampleBg(o - float2(r, -r) * 0.7071);
+    float3 c = mix(acc / 9.0, ramp(g), uP.z);
+    c += (ramp(1.0) * 0.6 + 0.4) * pow(1.0 - n.z, 2.0) * uP.w;
+    float3 L = normalize(float3(-0.4, -0.7, 0.6));
+    c += pow(max(dot(n, normalize(L + float3(0.0, 0.0, 1.0))), 0.0), 60.0) * 0.6;
+    return c;
+}
+`,
+liquidMetal: `
+// Material: Liquid Metal
+float3 material(float3 n, float g, float2 fc, float2 p) {
+    float3 r = reflect(float3(0.0, 0.0, -1.0), n);
+    float band = 0.5 + 0.5 * sin((r.y + p.y * 0.006) * uP.z * 3.14159 + r.x * 1.7 + uTime * 0.6);
+    float3 c = ramp(mix(g, band, uP.x));
+    c = (c - 0.5) * 1.25 + 0.5;
+    float3 L = normalize(float3(-0.35, -0.8, 0.5));
+    c += pow(max(dot(n, normalize(L + float3(0.0, 0.0, 1.0))), 0.0), mix(8.0, 120.0, 1.0 - uP.y));
+    return c;
+}
+`,
+pearl: `
+// Material: Pearl
+float3 material(float3 n, float g, float2 fc, float2 p) {
+    float3 c = mix(ramp(g), float3(1.0), 0.18);
+    float f = n.z;
+    float3 ir = 0.5 + 0.5 * cos(6.28318 * (f * 1.6 + p.x * 0.003 + p.y * 0.002 + uP.z + float3(0.0, 0.33, 0.67) + uTime * 0.05));
+    c = mix(c, c * 0.6 + ir * 0.55, uP.x * (1.0 - f * 0.5));
+    c += pow(1.0 - f, 2.0) * uP.y * 0.6;
+    return c;
+}
+`,
+matteClay: `
+// Material: Matte Clay
+float3 material(float3 n, float g, float2 fc, float2 p) {
+    float3 L = normalize(float3(-0.5, -0.7, 0.6));
+    float dif = max(dot(n, L), 0.0);
+    float3 c = ramp(g) * (mix(0.55, 0.85, uP.y) + dif * 0.45);
+    c += (hash12(floor(fc)) - 0.5) * uP.x * 0.12;
+    c *= 1.0 - (1.0 - n.z) * uP.z * 0.5;
+    return c;
+}
+`};
+const SH_CUE = `
+float4 over(float4 src, float4 dst) { return src + dst * (1.0 - src.a); }
+
+float4 cue(float2 fc) {
+    float2 p = fc / uScale;                       // dp, y down
+    float2 lp = p - uCenter;
+    float2 hb = max(uHalf, float2(0.5));
+    float rr = min(uRadius, min(hb.x, hb.y));
+    float d = sdRound(lp, hb, rr);
+
+    // surface normal from the SDF (circular bevel profile)
+    float e = 0.75;
+    float2 gr = float2(sdRound(lp + float2(e, 0.0), hb, rr) - sdRound(lp - float2(e, 0.0), hb, rr),
+                       sdRound(lp + float2(0.0, e), hb, rr) - sdRound(lp - float2(0.0, e), hb, rr));
+    float gl = length(gr);
+    float2 gOut = gl > 0.0001 ? gr / gl : float2(0.0);
+    float s = max(-d, 0.0);
+    float bv = clamp(uBevel, 0.5, min(hb.x, hb.y));
+    float u = 1.0 - clamp(s / bv, 0.0, 1.0);
+    float nz = sqrt(max(1.0 - u * u, 0.0));
+    float3 n = normalize(float3(gOut * u * uElev, mix(1.0, nz, uElev) + 0.001));
+
+    // gradient coordinate: highlight core -> rim / bottom
+    float3 H = normalize(float3(uHl.x, uHl.y, 1.0));
+    float2 q = lp / hb;
+    float gPlanar = clamp(length(q - uHl) / 1.35, 0.0, 1.0);
+    float gLinear = clamp(dot(q, uDir) * 0.5 + 0.5, 0.0, 1.0);
+    float gNormal = clamp((1.0 - dot(n, H)) / 1.6 + max(n.y, 0.0) * 0.25, 0.0, 1.0);
+    float g = uGradType > 0.5 ? mix(gLinear, gNormal, uElev * 0.4) : mix(gPlanar, gNormal, uElev);
+    float gEdge = 0.1 + 0.75 * (0.5 + 0.5 * sin(atan(lp.y, lp.x) * 2.0 + uTime * 0.9));
+    g = mix(gEdge, g, uFill);
+
+    float3 col = material(n, g, fc, p);
+    float3 axis = float3(sin(uPhase) * 0.7071, -sin(uPhase) * 0.7071, cos(uPhase));
+    float lit = smoothstep(-0.06, 0.06, dot(n, axis));
+    col = mix(col, mix(uNeutral, col, lit), uPhaseAmt);
+    col = clamp(col, 0.0, 1.0);
+
+    // coverage (+ edge-glow mode when uFill < 1)
+    float w = 1.0 / uScale + uEdgeSoft;
+    float cov = clamp(0.5 - d / w, 0.0, 1.0);
+    float inner = mix(exp(-s / max(uGlowW, 1.0)), 1.0, uFill);
+    float a = cov * inner * uOpacity;
+
+    float glowR = 14.0 + 22.0 * uGlow;
+    float ga = exp(-max(d, 0.0) / glowR) * uGlow * 0.55 * (1.0 - cov) * uOpacity;
+    float3 gcol = ramp(0.55);
+
+    float ds = sdRound(lp - float2(0.0, uShadowOff), hb * 0.9, rr * 0.9);
+    float sb = max(uShadowBlur, 1.0);
+    float sa = (1.0 - smoothstep(-sb, sb, ds)) * uShadow * 0.38;
+    float3 scol = ramp(0.0) * 0.45;
+
+    float4 o = float4(0.0, 0.0, 0.0, uScrim);
+    o = over(float4(scol * sa, sa), o);
+    o = over(float4(gcol * ga, ga), o);
+    o = over(float4(col * a, a), o);
+    return o;
+}
+`;
+function glslSource(mat){
+  return `#version 300 es
+precision highp float;
+#define float2 vec2
+#define float3 vec3
+#define float4 vec4
+${UNIFORMS.map(([t,n])=>`uniform ${t} ${n};`).join('\n')}
+uniform sampler2D uBg;
+out vec4 fragColor;
+float3 sampleBg(float2 c) { return texture(uBg, c / uRes).rgb; }
+${SH_COMMON}${SH_MATS[mat]}${SH_CUE}
+void main() {
+    fragColor = cue(float2(gl_FragCoord.x, uRes.y - gl_FragCoord.y));
+}
+`;
+}
+function agslSource(mat){
+  const glass = mat==='frostedGlass';
+  return `// AI Visual Cue — AGSL (Android 13 / API 33+)
+// fragCoord: px, origin top-left. Geometry uniforms are in dp (uScale = density).
+${UNIFORMS.map(([t,n])=>`uniform ${t} ${n};`).join('\n')}
+${glass?`uniform shader uBg;   // what sits behind the cue (setInputShader)
+float3 sampleBg(float2 c) { return uBg.eval(c).rgb; }
+`:''}${SH_COMMON}${SH_MATS[mat]}${SH_CUE}
+half4 main(float2 fragCoord) {
+    return half4(cue(fragCoord));
+}
+`;
+}
+const VS = `#version 300 es
+in vec2 aPos; void main(){ gl_Position = vec4(aPos, 0.0, 1.0); }`;
+
+class CueRenderer{
+  constructor(canvas){
+    this.c = canvas;
+    const gl = canvas.getContext('webgl2', { alpha:true, premultipliedAlpha:true, antialias:false, preserveDrawingBuffer:false });
+    if(!gl) throw new Error('WebGL2를 쓸 수 없는 브라우저입니다.');
+    this.gl = gl; this.progs = {};
+    this.vbo = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, this.vbo);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1,3,-1,-1,3]), gl.STATIC_DRAW);
+    this.tex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, this.tex);
+    gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,1,1,0,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array([240,240,244,255]));
+    for(const [k,v] of [[gl.TEXTURE_MIN_FILTER,gl.LINEAR],[gl.TEXTURE_MAG_FILTER,gl.LINEAR],[gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE],[gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE]]) gl.texParameteri(gl.TEXTURE_2D,k,v);
+  }
+  program(mat){
+    if(this.progs[mat]) return this.progs[mat];
+    const gl = this.gl;
+    const sh = (type, src)=>{ const s=gl.createShader(type); gl.shaderSource(s,src); gl.compileShader(s);
+      if(!gl.getShaderParameter(s,gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; };
+    const p = gl.createProgram();
+    gl.attachShader(p, sh(gl.VERTEX_SHADER, VS)); gl.attachShader(p, sh(gl.FRAGMENT_SHADER, glslSource(mat)));
+    gl.bindAttribLocation(p, 0, 'aPos'); gl.linkProgram(p);
+    if(!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
+    const loc = {}; for(const [,n] of UNIFORMS) loc[n] = gl.getUniformLocation(p, n);
+    loc.uBg = gl.getUniformLocation(p,'uBg');
+    return (this.progs[mat] = { p, loc });
+  }
+  setBg(source){ const gl=this.gl; gl.bindTexture(gl.TEXTURE_2D,this.tex); gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,false); gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,source); }
+  draw(mat, U){
+    const gl = this.gl, { p, loc } = this.program(mat);
+    gl.viewport(0,0,this.c.width,this.c.height);
+    gl.clearColor(0,0,0,0); gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.useProgram(p);
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.vbo); gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0,2,gl.FLOAT,false,0,0);
+    for(const k in U){ const l=loc[k]; if(!l) continue; const v=U[k];
+      if(typeof v==='number') gl.uniform1f(l,v); else if(v.length===2) gl.uniform2fv(l,v); else if(v.length===3) gl.uniform3fv(l,v); else gl.uniform4fv(l,v); }
+    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D,this.tex); if(loc.uBg) gl.uniform1i(loc.uBg,0);
+    gl.drawArrays(gl.TRIANGLES,0,3);
+  }
+}
+
+function effectiveDark(){
+  const t = document.documentElement.getAttribute('data-theme');
+  if(t) return t==='dark';
+  return window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches;
+}
+function buildUniforms(fr, scale, resW, resH, withScrim, timeS){
+  const { pose } = fr, su = stopUniforms(), mp = S.matParams[S.material], a = S.angle*Math.PI/180, dark = effectiveDark();
+  return {
+    uRes:[resW,resH], uScale:scale, uCenter:[pose.cx,pose.cy], uHalf:[pose.hx,pose.hy], uRadius:pose.r, uElev:pose.elev, uBevel:pose.bevel,
+    uShadow:pose.shadow*S.shadow, uShadowBlur:S.shadowBlur*(0.4+0.6*pose.elev), uShadowOff:S.shadowOff*pose.elev,
+    uFill:pose.fill, uGlowW:fr.glowW, uGlow:S.material==='softGlow'?mp[0]:0.1, uScrim:withScrim?pose.scrim:0,
+    uPhase:fr.phase, uPhaseAmt:fr.phaseAmt,
+    uHl:[S.hlX+Math.sin(timeS*0.6)*0.10*S.drift, S.hlY+Math.cos(timeS*0.45)*0.07*S.drift], uTime:timeS,
+    uP:[mp[0]||0,mp[1]||0,mp[2]||0,mp[3]||0], uC0:su.lab[0], uC1:su.lab[1], uC2:su.lab[2], uPos:su.pos, uStopCount:su.count,
+    uGradType:S.gradType==='linear'?1:0, uDir:[Math.cos(a),Math.sin(a)],
+    uNeutral: dark?[0.20,0.21,0.24]:[0.92,0.92,0.93], uEdgeSoft:S.material==='softGlow'?mp[2]:0.75, uOpacity:fr.opacity==null?1:fr.opacity,
+  };
+}
+
+/* ======================================================================
+   5. Backgrounds — ① neutral dot grid, ② app mock (also fed to glass)
+   ====================================================================== */
+function drawGridBg(ctx, W, H, s, dark){
+  ctx.setTransform(s,0,0,s,0,0);
+  ctx.fillStyle = dark ? '#101116' : '#F3F4F6'; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle = dark ? 'rgba(255,255,255,.09)' : 'rgba(20,24,44,.10)';
+  for(let y=16;y<H;y+=16) for(let x=12;x<W;x+=16){ ctx.beginPath(); ctx.arc(x,y,0.9,0,6.2832); ctx.fill(); }
+}
+function rr(ctx,x,y,w,h,r){ ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x,y,w,h,r) : ctx.rect(x,y,w,h); }
+function drawAppBg(ctx, W, H, s, dark){
+  const C = dark ? { bg:'#0E0F13', surf:'#191A20', line:'#2A2C35', line2:'#22242C', ink:'#ECEDF2', sub:'#8A8F9E', chip:'#1F2128', thumb:['#2B2F3B','#3B3145','#233540','#3A3528'] }
+                 : { bg:'#FFFFFF', surf:'#F3F4F8', line:'#DEE1E8', line2:'#E9EBF0', ink:'#16181E', sub:'#7A7F8C', chip:'#F0F1F5', thumb:['#DCE3F5','#F2DDE8','#D8EEEA','#F1E8D6'] };
+  ctx.setTransform(s,0,0,s,0,0);
+  ctx.fillStyle = C.bg; ctx.fillRect(0,0,W,H);
+  const font = (w,px)=>`${w} ${px}px "IBM Plex Sans KR","Apple SD Gothic Neo",system-ui,sans-serif`;
+  // status bar
+  ctx.fillStyle = C.ink; ctx.font = font(600,13); ctx.textBaseline='middle'; ctx.fillText('9:41', 24, 18);
+  rr(ctx,W-50,13,22,10,3); ctx.fill(); ctx.fillRect(W-73,14,3,8); ctx.fillRect(W-68,12,3,10); ctx.fillRect(W-63,10,3,12);
+  // header
+  ctx.font = font(600,24); ctx.fillText('오늘', 20, 64);
+  ctx.fillStyle = C.sub; ctx.font = font(400,13); ctx.fillText('10월 20일 화요일', 20, 90);
+  ctx.fillStyle = C.chip; ctx.beginPath(); ctx.arc(W-36,66,18,0,6.2832); ctx.fill();
+  // chips
+  let x = 20; ctx.font = font(500,13);
+  ['전체','일정','메모','사진','장소'].forEach((t,i)=>{ const w = ctx.measureText(t).width+28; rr(ctx,x,110,w,32,16); ctx.fillStyle = i===0?C.ink:C.chip; ctx.fill(); ctx.fillStyle = i===0?C.bg:C.ink; ctx.fillText(t, x+14, 126); x += w+8; });
+  // featured card
+  rr(ctx,20,160,W-40,150,20); ctx.fillStyle = C.surf; ctx.fill();
+  const gr = ctx.createLinearGradient(20,160,W-20,310); gr.addColorStop(0,C.thumb[0]); gr.addColorStop(1,C.thumb[1]);
+  rr(ctx,32,172,110,126,14); ctx.fillStyle = gr; ctx.fill();
+  ctx.fillStyle = C.ink; ctx.font = font(600,15); ctx.fillText('주간 회의 준비', 156, 190);
+  ctx.fillStyle = C.sub; ctx.font = font(400,12); ctx.fillText('오후 2:00 · 3층 회의실', 156, 212);
+  ctx.fillStyle = C.line; rr(ctx,156,236,150,8,4); ctx.fill(); rr(ctx,156,252,110,8,4); ctx.fill(); rr(ctx,156,268,130,8,4); ctx.fill();
+  // list
+  ctx.fillStyle = C.ink; ctx.font = font(600,15); ctx.fillText('최근 항목', 20, 342);
+  const titles = ['디자인 리뷰 메모','점심 장소 후보','출장 일정 정리','읽을거리 3개'];
+  for(let i=0;i<4;i++){
+    const y = 364 + i*72;
+    ctx.fillStyle = C.thumb[i]; rr(ctx,20,y,52,52,14); ctx.fill();
+    ctx.fillStyle = C.ink; ctx.font = font(500,14); ctx.fillText(titles[i], 88, y+16);
+    ctx.fillStyle = C.line; rr(ctx,88,y+32,150-i*14,8,4); ctx.fill();
+    ctx.fillStyle = C.sub; ctx.font = font(400,11); ctx.fillText(['9:12','어제','어제','월'][i], W-46, y+16);
+    if(i<3){ ctx.fillStyle = C.line2; ctx.fillRect(88,y+62,W-108,1); }
+  }
+  // input bar
+  rr(ctx,16,H-72,W-32,52,26); ctx.fillStyle = C.surf; ctx.fill();
+  ctx.fillStyle = C.sub; ctx.font = font(400,14); ctx.fillText('무엇이든 물어보세요', 36, H-46);
+  ctx.fillStyle = C.ink; ctx.beginPath(); ctx.arc(W-46,H-46,18,0,6.2832); ctx.fill();
+  ctx.fillStyle = C.bg; ctx.beginPath(); ctx.moveTo(W-46,H-55); ctx.lineTo(W-44,H-48); ctx.lineTo(W-37,H-46); ctx.lineTo(W-44,H-44); ctx.lineTo(W-46,H-37); ctx.lineTo(W-48,H-44); ctx.lineTo(W-55,H-46); ctx.lineTo(W-48,H-48); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = C.ink; rr(ctx,W/2-67,H-9,134,5,3); ctx.fill();
+}
+
+/* ======================================================================
+   6. Preview frames + layout + carousel
+   ====================================================================== */
+const DPR = Math.min(2, window.devicePixelRatio || 1);
+const frames = {
+  A:{ dev:$('#devA'), col:$('#colA'), bg:$('#bgA'), gl:$('#glA'), comp:$('#compA'), app:false },
+  B:{ dev:$('#devB'), col:$('#colB'), bg:$('#bgB'), gl:$('#glB'), comp:$('#compB'), app:true },
+};
+function $(s){ return document.querySelector(s); }
+let glError = null;
+for(const k of ['A','B']){
+  const f = frames[k];
+  try{ f.r = new CueRenderer(f.gl); for(const m of MAT_KEYS) f.r.program(m); }
+  catch(e){ glError = e; console.error(e); const d=document.createElement('div'); d.className='gl-error'; d.textContent='프리뷰를 그릴 수 없습니다: '+e.message; f.dev.appendChild(d); }
+  f.items = [0,1,2].map(()=>{ const d=document.createElement('div'); d.className='item'; d.style.opacity='0'; f.comp.appendChild(d); return d; });
+  f.scale = 1;
+}
+const hudA = { tl:$('#hudA [data-k=tl]'), tr:$('#hudA [data-k=tr]'), bl:$('#hudA [data-k=bl]'), br:$('#hudA [data-k=br]') };
+
+const VIEWS = [
+  { name:'전체 비교', desc:'① 비주얼 큐와 ② 앱 적용을 같은 시계로 나란히', show:['A','B'] },
+  { name:'① 비주얼 큐', desc:'큐 자체의 물성과 모션', show:['A'] },
+  { name:'② 앱 적용', desc:'실제 앱 화면에 녹아든 모습', show:['B'] },
+];
+let view = 0;
+try{ const v = +localStorage.getItem('avc-view'); if(v>=0 && v<3) view = v; }catch(e){}
+const dotsEl = $('#dots');
+VIEWS.forEach((v,i)=>{ const b=document.createElement('button'); b.type='button'; b.setAttribute('aria-label', v.name); b.onclick=()=>setView(i); dotsEl.appendChild(b); });
+function setView(i, dir){
+  view = (i+3)%3;
+  try{ localStorage.setItem('avc-view', view); }catch(e){}
+  const fr = $('#frames');
+  fr.style.transition='none'; fr.style.opacity='0'; fr.style.transform=`translateX(${(dir||0)*40}px)`;
+  frames.A.col.hidden = !VIEWS[view].show.includes('A');
+  frames.B.col.hidden = !VIEWS[view].show.includes('B');
+  $('#viewName').textContent = `${view+1} / 3 · ${VIEWS[view].name}`;
+  $('#viewDesc').textContent = VIEWS[view].desc;
+  [...dotsEl.children].forEach((b,j)=>b.setAttribute('aria-current', j===view));
+  layout();
+  requestAnimationFrame(()=>{ fr.style.transition=''; fr.style.opacity='1'; fr.style.transform='translateX(0)'; });
+}
+$('#prevView').onclick = ()=>setView(view-1,-1);
+$('#nextView').onclick = ()=>setView(view+1, 1);
+
+function layout(){
+  const body = $('#stageBody');
+  const shown = VIEWS[view].show;
+  const W = body.clientWidth - 32, H = body.clientHeight - 32 - 30;
+  const gap = 28, n = shown.length;
+  const s = Math.max(0.2, Math.min(H/SCREEN.h, (W - gap*(n-1))/(SCREEN.w*n)));
+  const dark = effectiveDark();
+  for(const k of ['A','B']){
+    const f = frames[k];
+    const cw = Math.round(SCREEN.w*s), ch = Math.round(SCREEN.h*s);
+    f.dev.style.width = cw+'px'; f.dev.style.height = ch+'px'; f.dev.style.borderRadius = Math.round(30*s)+'px';
+    const pw = Math.round(cw*DPR), ph = Math.round(ch*DPR);
+    f.scale = pw / SCREEN.w;  // device px per dp
+    f.css = cw / SCREEN.w;    // css px per dp
+    for(const c of [f.bg, f.gl]){ c.width = pw; c.height = ph; }
+    const ctx = f.bg.getContext('2d');
+    ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,pw,ph);
+    (f.app ? drawAppBg : drawGridBg)(ctx, SCREEN.w, SCREEN.h, f.scale, dark);
+    if(f.r) f.r.setBg(f.bg);
+    f.items.forEach(el=>el.style.setProperty('--ic', Math.round(28*f.css)+'px'));
+    f.dev.style.setProperty('--hud', dark ? '#7D8292' : '#7A7F8D');
+  }
+  const fs = Math.max(9, 11*f_css());
+  for(const [k,el] of Object.entries(hudA)){
+    el.style.fontSize = fs+'px';
+    const m = Math.round(18*frames.A.css)+'px';
+    el.style.left = k.endsWith('l') ? m : ''; el.style.right = k.endsWith('r') ? m : '';
+    el.style.top = k.startsWith('t') ? Math.round(14*frames.A.css)+'px' : ''; el.style.bottom = k.startsWith('b') ? Math.round(14*frames.A.css)+'px' : '';
+  }
+}
+function f_css(){ return frames.A.css || 1; }
+new ResizeObserver(()=>layout()).observe($('#stageBody'));
+
+// drag / swipe between views
+(()=>{
+  const body = $('#stageBody'), fr = $('#frames'); let x0=null, dx=0, id=null;
+  body.addEventListener('pointerdown', e=>{ if(e.button!==0) return; x0=e.clientX; dx=0; id=e.pointerId; body.setPointerCapture(id); body.classList.add('dragging'); fr.style.transition='none'; });
+  body.addEventListener('pointermove', e=>{ if(x0===null) return; dx=e.clientX-x0; fr.style.transform=`translateX(${dx*0.5}px)`; });
+  const end = ()=>{ if(x0===null) return; body.classList.remove('dragging'); fr.style.transition='';
+    if(Math.abs(dx)>60) setView(view+(dx<0?1:-1), dx<0?1:-1); else fr.style.transform='translateX(0)'; x0=null; };
+  body.addEventListener('pointerup', end); body.addEventListener('pointercancel', end);
+})();
+
+/* ======================================================================
+   7. Clock, transport, render loop
+   ====================================================================== */
+const reduceMotion = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+let playing = !reduceMotion, T = reduceMotion ? 1300 : 0, clockS = 0, last = performance.now();
+const playBtn = $('#playBtn'), scrub = $('#scrub'), tclock = $('#tclock'), lanesEl = $('#lanes');
+function setPlaying(p){ playing=p; playBtn.textContent = p ? '❚❚' : '▶'; playBtn.setAttribute('aria-label', p?'일시정지':'재생'); }
+setPlaying(playing);
+playBtn.onclick = ()=>setPlaying(!playing);
+scrub.addEventListener('input', ()=>{ T = (+scrub.value/1000)*TL.len; });
+function buildLanes(){
+  lanesEl.innerHTML='';
+  TL.segs.forEach((g,i)=>{ const d=document.createElement('div'); d.className='lane'; d.style.left=(g.t0/TL.len*100)+'%'; d.style.width=(g.dur/TL.len*100)+'%';
+    d.textContent = g.name; d.title = `${g.name} · ${Math.round(g.dur)}ms`; d.dataset.i=i; lanesEl.appendChild(d); });
+  $('#loopHint').textContent = `루프 ${(TL.len/1000/S.speed).toFixed(2)}s`;
+}
+buildLanes();
+document.querySelectorAll('#levels button').forEach(b=>b.onclick=()=>{ const l=+b.dataset.l; const idx = l===1?1:l===2?3:5; T = TL.segs[idx].t0; });
+document.addEventListener('keydown', e=>{
+  if(e.target.closest('input,textarea,select,[contenteditable]')) return;
+  if($('#view-cue').hidden) return;
+  if(e.key==='ArrowRight') setView(view+1,1); else if(e.key==='ArrowLeft') setView(view-1,-1);
+  else if(e.key===' '){ e.preventDefault(); setPlaying(!playing); }
+});
+
+let lastSeg = -1, lastLevel = -1;
+function renderFrame(fr){
+  const shown = VIEWS[view].show;
+  for(const k of shown){
+    const f = frames[k]; if(!f.r) continue;
+    f.r.draw(S.material, buildUniforms(fr, f.scale, f.gl.width, f.gl.height, f.app, clockS));
+    // generated list components, positioned in dp
+    const p = fr.pose, pad=16, gap=10, rowH=(p.hy*2-pad*2-gap*2)/3, rowW=p.hx*2-pad*2, c=f.css;
+    f.items.forEach((el,i)=>{
+      const a = fr.items[i];
+      if(a<=0.001 || rowH<8){ if(el.style.opacity!=='0') el.style.opacity='0'; return; }
+      el.style.width = (rowW*c)+'px'; el.style.height = (rowH*c)+'px';
+      el.style.transform = `translate(${(p.cx-p.hx+pad)*c}px, ${(p.cy-p.hy+pad+i*(rowH+gap)+(1-a)*10)*c}px)`;
+      el.style.opacity = a.toFixed(3);
+    });
+  }
+  if(shown.includes('A')){
+    hudA.bl.textContent = `L${fr.level} / 3`;
+    hudA.br.textContent = fr.seg.name;
+  }
+}
+function tick(now){
+  const dt = Math.min(64, now-last); last = now;
+  if(playing){ T = (T + dt*S.speed) % TL.len; clockS += dt*S.speed/1000; }
+  const fr = sampleFrame(T);
+  if(!glError) renderFrame(fr);
+  if(document.activeElement !== scrub) scrub.value = Math.round(T/TL.len*1000);
+  tclock.textContent = `${(T/1000/S.speed).toFixed(2)} / ${(TL.len/1000/S.speed).toFixed(2)}s`;
+  const si = TL.segs.indexOf(fr.seg);
+  if(si!==lastSeg){ [...lanesEl.children].forEach((d,i)=>d.classList.toggle('on', i===si)); lastSeg=si; }
+  if(fr.level!==lastLevel){ document.querySelectorAll('#levels button').forEach(b=>b.setAttribute('aria-current', +b.dataset.l===fr.level)); lastLevel=fr.level; }
+  requestAnimationFrame(tick);
+}
+
+/* ======================================================================
+   8. Design panel
+   ====================================================================== */
+let selStop = 0;
+function changed(opts={}){
+  if(opts.motion) { rebuildMotion(); buildLanes(); T = Math.min(T, TL.len-1); }
+  saveSpec(); scheduleCode();
+  if(opts.thumbs) scheduleThumbs();
+}
+function rangeCtrl(host, label, unit, min, max, step, get, set, fmt){
+  const id = 'r-'+Math.random().toString(36).slice(2,8);
+  const w = document.createElement('div'); w.className='ctrl';
+  w.innerHTML = `<div class="row-label"><label for="${id}">${label}</label><output for="${id}"></output></div><input type="range" id="${id}" min="${min}" max="${max}" step="${step}">`;
+  const inp = w.querySelector('input'), out = w.querySelector('output');
+  const paint = ()=>{ const v=get(); inp.value=v; out.textContent = (fmt?fmt(v):(+v).toFixed(step<0.1?2:step<1?1:0)) + (unit?` ${unit}`:''); inp.style.setProperty('--p', ((v-min)/(max-min)*100)+'%'); };
+  inp.addEventListener('input', ()=>{ set(+inp.value); paint(); });
+  host.appendChild(w); paint(); w.paint = paint; return w;
+}
+function segCtrl(el, get, set){
+  const paint = ()=>el.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed', b.dataset.v===get()));
+  el.querySelectorAll('button').forEach(b=>b.onclick=()=>{ set(b.dataset.v); paint(); });
+  paint(); return paint;
+}
+
+// presets
+const presetsEl = $('#presets');
+function cssGrad(stops, dir='180deg'){ const st=[...stops].sort((a,b)=>a.pos-b.pos); if(st.length===1) return st[0].color; return `linear-gradient(${dir}, ${st.map(s=>`${s.color} ${(s.pos*100).toFixed(1)}%`).join(', ')})`; }
+function paintPresets(){ presetsEl.querySelectorAll('.preset').forEach(b=>b.setAttribute('aria-pressed', S.preset===b.dataset.k)); }
+for(const [k,p] of Object.entries(PRESETS)){
+  const b=document.createElement('button'); b.type='button'; b.className='preset'; b.dataset.k=k;
+  b.innerHTML = `<div class="sw" style="background:${cssGrad(p.stops,'90deg')}"></div><span>${p.name}</span>`;
+  b.onclick=()=>{ S.stops = p.stops.map(s=>({...s})); S.preset=k; selStop=0; paintGrad(); paintPresets(); changed({thumbs:true}); };
+  presetsEl.appendChild(b);
+}
+// about palettes
+$('#aboutPalettes').innerHTML = Object.values(PRESETS).map(p=>`<div class="pal-row"><span style="width:70px;font-family:var(--f-ui);font-weight:600">${p.name}</span>${p.stops.map(s=>`<span><i style="background:${s.color}"></i>${s.name} ${s.color}</span>`).join('')}</div>`).join('');
+
+// gradient editor
+const gradEl = $('#grad'), stopColor=$('#stopColor'), stopHex=$('#stopHex'), stopName=$('#stopName'), stopDel=$('#stopDel'), stopAdd=$('#stopAdd');
+const PAD = 18;
+function paintGrad(){
+  gradEl.style.background = cssGrad(S.stops);
+  gradEl.querySelectorAll('.stop').forEach(n=>n.remove());
+  const h = gradEl.clientHeight || 210;
+  S.stops.forEach((st,i)=>{
+    const b=document.createElement('button'); b.type='button'; b.className='stop'+(i===selStop?' sel':'')+(luminance(st.color)>0.62?' dark-label':'');
+    b.style.top = (PAD + st.pos*(h-PAD*2))+'px';
+    b.setAttribute('aria-label', `${st.name||'스톱'} ${st.color}, 위치 ${Math.round(st.pos*100)}%`);
+    b.innerHTML = `<i class="sq" style="background:${st.color}"></i><span class="lb">${escapeHtml(st.name||'Stop '+(i+1))}<i>${st.color.toUpperCase()}</i></span>`;
+    b.addEventListener('pointerdown', e=>startDrag(e,i));
+    b.addEventListener('keydown', e=>{ if(e.key==='ArrowUp'||e.key==='ArrowDown'){ e.preventDefault(); st.pos=clamp01(st.pos+(e.key==='ArrowUp'?-0.01:0.01)); S.preset=null; paintGrad(); paintPresets(); changed({thumbs:true}); gradEl.querySelectorAll('.stop')[i].focus(); }});
+    gradEl.appendChild(b);
+  });
+  const st = S.stops[selStop];
+  stopColor.value = st.color.toLowerCase(); stopHex.value = st.color.toUpperCase(); stopName.value = st.name||'';
+  stopDel.disabled = S.stops.length<=1; stopAdd.disabled = S.stops.length>=3;
+  $('#gradPos').textContent = `${st.name||'Stop'} · ${Math.round(st.pos*100)}%`;
+}
+function startDrag(e, i){
+  e.preventDefault(); selStop = i; paintGrad();
+  const rect = gradEl.getBoundingClientRect();
+  const move = ev=>{ S.stops[i].pos = clamp01((ev.clientY - rect.top - PAD)/(rect.height-PAD*2)); S.preset=null;
+    const n = gradEl.querySelectorAll('.stop')[i]; n.style.top = (PAD + S.stops[i].pos*(rect.height-PAD*2))+'px';
+    gradEl.style.background = cssGrad(S.stops); $('#gradPos').textContent = `${S.stops[i].name||'Stop'} · ${Math.round(S.stops[i].pos*100)}%`; changed(); };
+  const up = ()=>{ window.removeEventListener('pointermove',move); window.removeEventListener('pointerup',up); paintGrad(); paintPresets(); changed({thumbs:true}); };
+  window.addEventListener('pointermove',move); window.addEventListener('pointerup',up);
+}
+function setStopColor(hex){ S.stops[selStop].color = hex.toUpperCase(); S.preset=null; paintGrad(); paintPresets(); changed({thumbs:true}); }
+stopColor.addEventListener('input', ()=>setStopColor(stopColor.value));
+stopHex.addEventListener('change', ()=>{ let v=stopHex.value.trim(); if(!v.startsWith('#')) v='#'+v; if(/^#[0-9a-fA-F]{6}$/.test(v)) setStopColor(v); else { stopHex.value=S.stops[selStop].color; toast('HEX는 #RRGGBB 형식으로 입력하세요'); } });
+stopName.addEventListener('input', ()=>{ S.stops[selStop].name = stopName.value; const lb=gradEl.querySelectorAll('.stop .lb')[selStop]; if(lb) lb.firstChild.textContent = stopName.value||'Stop'; changed(); });
+stopDel.onclick = ()=>{ if(S.stops.length<=1) return; S.stops.splice(selStop,1); selStop=0; S.preset=null; paintGrad(); paintPresets(); changed({thumbs:true}); };
+stopAdd.onclick = ()=>{ if(S.stops.length>=3) return; const st=sortedStops();
+  let pos = 0.5; if(st.length===2) pos = (st[0].pos+st[1].pos)/2; else if(st.length===1) pos = st[0].pos>0.5?0:1;
+  S.stops.push({color: st.length? st[st.length-1].color : '#3A77FF', pos, name:'New'}); selStop=S.stops.length-1; S.preset=null; paintGrad(); paintPresets(); changed({thumbs:true}); };
+const paintGradType = segCtrl($('#gradType'), ()=>S.gradType, v=>{ S.gradType=v; changed({thumbs:true}); });
+const colorCtrls = [
+  rangeCtrl($('#colorCtrls'),'하이라이트 가로','',-0.8,0.8,0.01,()=>S.hlX,v=>{S.hlX=v;changed({thumbs:true});}),
+  rangeCtrl($('#colorCtrls'),'하이라이트 세로','',-0.8,0.8,0.01,()=>S.hlY,v=>{S.hlY=v;changed({thumbs:true});}),
+];
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// materials
+const matsEl = $('#mats');
+MAT_KEYS.forEach(k=>{
+  const b=document.createElement('button'); b.type='button'; b.className='mat'; b.dataset.k=k;
+  b.innerHTML = `<img alt="" width="64" height="64"><span>${MATS[k].name}</span>`;
+  b.onclick = ()=>{ S.material=k; paintMat(); changed(); };
+  matsEl.appendChild(b);
+});
+function paintMat(){
+  matsEl.querySelectorAll('.mat').forEach(b=>b.setAttribute('aria-pressed', b.dataset.k===S.material));
+  const m = MATS[S.material];
+  $('#matDesc').textContent = m.desc; $('#matHint').textContent = m.en;
+  const host = $('#matCtrls'); host.innerHTML='';
+  m.params.forEach(([label,min,max,step],i)=>rangeCtrl(host,label,'',min,max,step,()=>S.matParams[S.material][i],v=>{S.matParams[S.material][i]=v;changed({thumbs:true});}));
+}
+
+// size / motion / shadow
+const ctrlSets = [];
+function addSet(host, defs, motion){ defs.forEach(([k,label,unit,min,max,step])=>ctrlSets.push(rangeCtrl($(host),label,unit,min,max,step,()=>S[k],v=>{S[k]=v;changed({motion:true, thumbs:k==='diameter'});}))); }
+addSet('#sizeCtrls', [['diameter','구 지름','dp',64,220,1],['flatRatio','납작 상태 폭','×',0.2,1.2,0.01],['flatThick','납작 상태 두께','dp',2,12,0.5],['cardH','안착 높이','dp',120,360,1],['cardThick','안착 두께','dp',2,40,1],['cardCorner','안착 모서리','dp',0,48,1],['margin','좌우 여백','dp',0,40,1]]);
+addSet('#motionCtrls', [['speed','재생 속도','×',0.25,2,0.05],['transMs','전환 시간','ms',300,1600,10],['l1Hold','L1 유지','ms',500,6000,50],['l2Hold','L2 유지','ms',500,6000,50],['l3Hold','L3 유지','ms',500,6000,50],['flatHoldMs','대기(납작) 유지','ms',0,3000,50],['floatAmp','부유 진폭','dp',0,10,0.5],['floatPeriod','부유 주기','ms',800,5000,50],['drift','하이라이트 흔들림','',0,1,0.01],['stagger','컴포넌트 간격','ms',0,200,5]]);
+addSet('#shadowCtrls', [['shadow','그림자 강도','',0,1,0.01],['shadowBlur','그림자 번짐','dp',2,40,1],['shadowOff','그림자 거리','dp',0,32,1]]);
+const paintTrans = segCtrl($('#transStyle'), ()=>S.transition, v=>{ S.transition=v; changed({motion:true}); });
+const paintEase = segCtrl($('#easing'), ()=>S.easing, v=>{ S.easing=v; $('#easeOut').textContent = EASINGS[v].join(', '); changed({motion:true}); });
+$('#easeOut').textContent = EASINGS[S.easing].join(', ');
+$('#resetAll').onclick = ()=>{ S = defaultSpec(); selStop=0; repaintAll(); changed({motion:true, thumbs:true}); toast('기본값으로 되돌렸습니다'); };
+function repaintAll(){ paintGrad(); paintPresets(); paintMat(); paintGradType(); paintTrans(); paintEase(); $('#easeOut').textContent = EASINGS[S.easing].join(', ');
+  colorCtrls.forEach(c=>c.paint()); ctrlSets.forEach(c=>c.paint()); }
+
+// material thumbnails (third tiny GL context)
+let thumbR = null, thumbTimer = 0;
+const thumbCanvas = document.createElement('canvas'); thumbCanvas.width = thumbCanvas.height = 128;
+const thumbBg = document.createElement('canvas'); thumbBg.width = thumbBg.height = 128;
+const thumbOut = document.createElement('canvas'); thumbOut.width = thumbOut.height = 128;
+try{ thumbR = new CueRenderer(thumbCanvas); }catch(e){}
+function renderThumbs(){
+  if(!thumbR) return;
+  const dark = effectiveDark(), sc = 128/100;
+  const bctx = thumbBg.getContext('2d'); bctx.setTransform(1,0,0,1,0,0);
+  drawGridBg(bctx, 100, 100, sc, dark); thumbR.setBg(thumbBg);
+  const fr = { pose:{cx:50,cy:46,hx:31,hy:31,r:31,elev:1,bevel:31,shadow:1,fill:1,scrim:0}, glowW:28, phase:0, phaseAmt:0 };
+  const keep = S.material, o = thumbOut.getContext('2d');
+  for(const k of MAT_KEYS){
+    S.material = k;
+    const U = buildUniforms(fr, sc, 128, 128, false, 1.2); U.uShadowOff = 7; U.uShadowBlur = 8; U.uHl = [S.hlX, S.hlY];
+    thumbR.draw(k, U);
+    o.clearRect(0,0,128,128); o.drawImage(thumbBg,0,0); o.drawImage(thumbCanvas,0,0);
+    const img = matsEl.querySelector(`.mat[data-k="${k}"] img`); if(img) img.src = thumbOut.toDataURL('image/png');
+  }
+  S.material = keep;
+}
+function scheduleThumbs(){ clearTimeout(thumbTimer); thumbTimer = setTimeout(renderThumbs, 120); }
+
+/* ======================================================================
+   9. Code generation (Kotlin + Compose, AGSL, JSON)
+   ====================================================================== */
+const kf = n => { let s=(+n).toFixed(4).replace(/\.?0+$/,''); if(s==='-0') s='0'; return s+'f'; };
+const kargb = h => '0xFF'+h.slice(1).toUpperCase();
+function genKotlin(){
+  const st = sortedStops(), mp = S.matParams[S.material], m = MATS[S.material], glass = S.material==='frostedGlass', sp = S.speed;
+  const ez = EASINGS[S.easing];
+  const dur = v => kf(v/sp);
+  const glowV = S.material==='softGlow'?mp[0]:0.1, edgeV = S.material==='softGlow'?mp[2]:0.75;
+  return `// ─────────────────────────────────────────────────────────────────────────────
+// AI Visual Cue — generated by AI Visual Cue Studio v0.1
+// Material: ${m.en} · Palette: ${st.map(s=>(s.name||s.color)).join(' → ')}
+// minSdk 26 · Android 13 (API 33)+ renders the AGSL shader below,
+// API 26–32 falls back to Brush gradients. No extra dependencies (Compose BOM only).
+//
+// Usage:
+//   AiVisualCueDemoLoop()                       // same infinite L1→L2→L3 loop as the tool
+//   AiVisualCue(level = CueLevel.L2)            // drive it from your own state
+// ─────────────────────────────────────────────────────────────────────────────
+package com.example.aivisualcue
+
+import android.graphics.LinearGradient
+import android.graphics.RuntimeShader
+import android.graphics.Shader
+import android.os.Build
+import androidx.annotation.RequiresApi
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ShaderBrush
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.max
+import kotlin.math.min
+import kotlin.math.pow
+import kotlin.math.sin
+
+// ───────────────────────────── Spec (values from the tool) ─────────────────────────────
+
+data class CueStop(val argb: Long, val position: Float)
+
+/** All lengths are dp, all durations are ms (playback speed ${kf(sp).slice(0,-1)}× already applied). */
+data class AiVisualCueSpec(
+    val stops: List<CueStop> = listOf(
+${st.map(s=>`        CueStop(${kargb(s.color)}, ${kf(s.pos)}),${s.name?` // ${s.name.replace(/\*\//g,'')}`:''}`).join('\n')}
+    ),
+    val linearGradient: Boolean = ${S.gradType==='linear'},
+    val gradientAngleDeg: Float = ${kf(S.angle)},
+    val highlightX: Float = ${kf(S.hlX)},
+    val highlightY: Float = ${kf(S.hlY)},
+    val highlightDrift: Float = ${kf(S.drift)},
+    val materialParams: List<Float> = listOf(${[0,1,2,3].map(i=>kf(mp[i]||0)).join(', ')}), // ${m.params.map(p=>p[0]).join(' · ')}
+    val glow: Float = ${kf(glowV)},
+    val edgeSoftness: Float = ${kf(edgeV)},
+    val sphereDiameter: Float = ${kf(S.diameter)},
+    val flatWidthRatio: Float = ${kf(S.flatRatio)},
+    val flatThickness: Float = ${kf(S.flatThick)},
+    val cardHeight: Float = ${kf(S.cardH)},
+    val cardThickness: Float = ${kf(S.cardThick)},
+    val cardCorner: Float = ${kf(S.cardCorner)},
+    val margin: Float = ${kf(S.margin)},
+    val topInset: Float = ${kf(TOP_INSET)},
+    val bottomInset: Float = ${kf(BOTTOM_INSET)},
+    val shadowStrength: Float = ${kf(S.shadow)},
+    val shadowBlur: Float = ${kf(S.shadowBlur)},
+    val shadowOffset: Float = ${kf(S.shadowOff)},
+    val floatAmplitude: Float = ${kf(S.floatAmp)},
+    val floatPeriodMs: Float = ${dur(S.floatPeriod)},
+    val transitionMs: Float = ${dur(S.transMs)},
+    val settleMs: Float = ${dur(S.settleMs)},
+    val flatHoldMs: Float = ${dur(S.flatHoldMs)},
+    val l1HoldMs: Float = ${dur(S.l1Hold)},
+    val l2HoldMs: Float = ${dur(S.l2Hold)},
+    val l3HoldMs: Float = ${dur(S.l3Hold)},
+    val componentStaggerMs: Float = ${dur(S.stagger)},
+    val phaseTransition: Boolean = ${S.transition==='phase'},
+    val scrim: Boolean = true,
+    val easing: CubicBezierEasing = CubicBezierEasing(${ez.map(kf).join(', ')}),
+)
+
+enum class CueLevel { Idle, L1, L2, L3 }
+
+// ───────────────────────────── Public composables ─────────────────────────────
+
+/** Plays Idle → L1 → L2 → L3 → Idle forever, exactly like the tool preview. */
+@Composable
+fun AiVisualCueDemoLoop(
+    modifier: Modifier = Modifier.fillMaxSize(),
+    spec: AiVisualCueSpec = AiVisualCueSpec(),
+    background: Shader? = null,
+) {
+    val timeMs by rememberCueTimeMs()
+    BoxWithConstraints(modifier) {
+        val w = maxWidth.value
+        val h = maxHeight.value
+        val timeline = remember(spec, w, h) { CueTimeline(spec, w, h) }
+        CueLayer(spec, timeline.sample(timeMs), timeMs, background)
+    }
+}
+
+/** Shows one level and animates to a new one whenever [level] changes. */
+@Composable
+fun AiVisualCue(
+    level: CueLevel,
+    modifier: Modifier = Modifier.fillMaxSize(),
+    spec: AiVisualCueSpec = AiVisualCueSpec(),
+    background: Shader? = null,
+) {
+    val timeMs by rememberCueTimeMs()
+    val now by rememberUpdatedState(timeMs)
+    BoxWithConstraints(modifier) {
+        val w = maxWidth.value
+        val h = maxHeight.value
+        val poses = remember(spec, w, h) { CuePoses(spec, w, h) }
+        val target = poses.forLevel(level)
+        var from by remember(poses) { mutableStateOf(target) }
+        var to by remember(poses) { mutableStateOf(target) }
+        var settledAt by remember { mutableFloatStateOf(0f) }
+        val progress = remember { Animatable(1f) }
+        LaunchedEffect(target) {
+            if (target !== to) {
+                from = interpPose(from, to, progress.value, spec.easing)
+                to = target
+                progress.snapTo(0f)
+                val d = spec.transitionMs + if (level == CueLevel.L2) spec.settleMs else 0f
+                progress.animateTo(1f, tween(d.toInt(), easing = LinearEasing))
+                settledAt = now
+            }
+        }
+        val tl = progress.value
+        var pose = interpPose(from, to, tl, spec.easing)
+        val since = timeMs - settledAt
+        if (level == CueLevel.L1 && tl >= 1f) {
+            val wave = sin(2f * PI.toFloat() * since / spec.floatPeriodMs)
+            val env = clamp01(since / 400f)
+            pose = pose.copy(cy = pose.cy + wave * spec.floatAmplitude * env, shadow = pose.shadow * (1f - 0.15f * wave * env))
+        }
+        val items = FloatArray(3)
+        if (level == CueLevel.L2 && tl >= 1f) {
+            for (i in 0 until 3) items[i] = clamp01((since - 120f - i * spec.componentStaggerMs) / 260f)
+        }
+        val glowW = if (level == CueLevel.L3) 28f * (1f + 0.15f * sin(2f * PI.toFloat() * timeMs / 2000f)) else 28f
+        val inTransition = spec.phaseTransition && tl < 1f
+        val phase = if (inTransition) 2f * PI.toFloat() * spec.easing.transform(tl) else 0f
+        val phaseAmt = if (inTransition) sin(PI.toFloat() * tl) else 0f
+        CueLayer(spec, CueFrame(pose, phase, phaseAmt, glowW, items), timeMs, background)
+    }
+}
+
+// ───────────────────────────── Motion (mirrors the tool's timeline) ─────────────────────────────
+
+private data class CuePose(
+    val cx: Float, val cy: Float, val hx: Float, val hy: Float, val r: Float,
+    val elev: Float, val bevel: Float, val shadow: Float, val fill: Float, val scrim: Float,
+)
+
+private class CueFrame(
+    val pose: CuePose, val phase: Float, val phaseAmt: Float, val glowW: Float, val items: FloatArray, val opacity: Float = 1f,
+)
+
+private fun mixf(a: Float, b: Float, t: Float) = a + (b - a) * t
+private fun clamp01(x: Float) = x.coerceIn(0f, 1f)
+
+private fun interpPose(a: CuePose, b: CuePose, t: Float, ease: CubicBezierEasing): CuePose {
+    val e = ease.transform(clamp01(t))
+    val ex = ease.transform(clamp01(t * 1.15f))          // width leads
+    val ey = ease.transform(clamp01((t - 0.12f) / 0.88f)) // height lags
+    val es = ease.transform(clamp01((t - 0.15f) / 0.85f)) // shadow lags
+    return CuePose(
+        mixf(a.cx, b.cx, e), mixf(a.cy, b.cy, e), mixf(a.hx, b.hx, ex), mixf(a.hy, b.hy, ey), mixf(a.r, b.r, e),
+        mixf(a.elev, b.elev, e), mixf(a.bevel, b.bevel, e), mixf(a.shadow, b.shadow, es), mixf(a.fill, b.fill, e), mixf(a.scrim, b.scrim, e),
+    )
+}
+
+private class CuePoses(s: AiVisualCueSpec, w: Float, h: Float) {
+    val flat = CuePose(w / 2f, s.topInset + s.flatThickness / 2f, s.sphereDiameter * s.flatWidthRatio / 2f, s.flatThickness / 2f,
+        s.flatThickness / 2f, 0f, s.flatThickness / 2f, 0f, 1f, 0f)
+    val sphere = CuePose(w / 2f, s.topInset + 12f + s.sphereDiameter / 2f, s.sphereDiameter / 2f, s.sphereDiameter / 2f,
+        s.sphereDiameter / 2f, 1f, s.sphereDiameter / 2f, 1f, 1f, 0.06f)
+    val card = CuePose(w / 2f, h - s.bottomInset - s.cardHeight / 2f, w / 2f - s.margin, s.cardHeight / 2f,
+        s.cardCorner, 0.3f, s.cardThickness, 0.18f, 1f, 0.14f)
+    val full = CuePose(w / 2f, h / 2f, w / 2f, h / 2f, 28f, 0.12f, 40f, 0f, 0f, 0.3f)
+    val all = listOf(flat, sphere, card, full)
+    fun forLevel(l: CueLevel) = when (l) {
+        CueLevel.Idle -> flat
+        CueLevel.L1 -> sphere
+        CueLevel.L2 -> card
+        CueLevel.L3 -> full
+    }
+}
+
+private class CueSegment(
+    val hold: Boolean, val a: Int, val b: Int, val dur: Float,
+    val floating: Boolean = false, val comps: Boolean = false, val breathe: Boolean = false,
+    val appear: Boolean = false, val vanish: Boolean = false,
+) { var t0 = 0f }
+
+private class CueTimeline(private val s: AiVisualCueSpec, w: Float, h: Float) {
+    private val poses = CuePoses(s, w, h).all
+    private val segs = listOf(
+        CueSegment(true, 0, 0, s.flatHoldMs, appear = true),                  // Idle (flat), fades in
+        CueSegment(false, 0, 1, s.transitionMs),                              // L1 rise
+        CueSegment(true, 1, 1, s.l1HoldMs, floating = true),                  // L1 float
+        CueSegment(false, 1, 2, s.transitionMs + s.settleMs),                 // L2 spread + settle
+        CueSegment(true, 2, 2, s.l2HoldMs, comps = true),                     // L2 list items
+        CueSegment(false, 2, 3, s.transitionMs),                              // L3 expand
+        CueSegment(true, 3, 3, s.l3HoldMs, breathe = true),                   // L3 edge glow
+        CueSegment(false, 3, 0, s.transitionMs, vanish = true),               // shrink to top and vanish
+    )
+    val loopMs: Float
+
+    init {
+        var t = 0f
+        for (g in segs) { g.t0 = t; t += g.dur }
+        loopMs = max(t, 1f)
+    }
+
+    fun sample(tMs: Float): CueFrame {
+        val t = ((tMs % loopMs) + loopMs) % loopMs
+        val g = segs.lastOrNull { it.t0 <= t } ?: segs.first()
+        val local = t - g.t0
+        val items = FloatArray(3)
+        var glowW = 28f
+        var phase = 0f
+        var phaseAmt = 0f
+        var opacity = 1f
+        if (g.appear) opacity = if (g.dur > 0f) clamp01((local - 0.3f * g.dur) / (0.7f * g.dur)) else 1f
+        val pose: CuePose
+        if (g.hold) {
+            var p = poses[g.a]
+            if (g.floating) {
+                val env = clamp01(min(local / 400f, (g.dur - local) / 400f))
+                val wave = sin(2f * PI.toFloat() * local / s.floatPeriodMs)
+                p = p.copy(cy = p.cy + wave * s.floatAmplitude * env, shadow = p.shadow * (1f - 0.15f * wave * env))
+            }
+            if (g.comps) {
+                for (i in 0 until 3) {
+                    items[i] = clamp01((local - 120f - i * s.componentStaggerMs) / 260f) * clamp01((g.dur - local) / 220f)
+                }
+            }
+            if (g.breathe) glowW = 28f * (1f + 0.15f * sin(2f * PI.toFloat() * local / 2000f))
+            pose = p
+        } else {
+            val tl = clamp01(local / g.dur)
+            pose = interpPose(poses[g.a], poses[g.b], tl, s.easing)
+            if (s.phaseTransition) {
+                phase = 2f * PI.toFloat() * s.easing.transform(tl)
+                phaseAmt = sin(PI.toFloat() * tl)
+            }
+            if (g.vanish) opacity = 1f - s.easing.transform(clamp01((tl - 0.35f) / 0.65f))
+        }
+        return CueFrame(pose, phase, phaseAmt, glowW, items, opacity)
+    }
+}
+
+@Composable
+private fun rememberCueTimeMs(): State<Float> = produceState(0f) {
+    var start = -1L
+    while (true) {
+        withFrameNanos { now ->
+            if (start < 0L) start = now
+            value = (now - start) / 1_000_000f
+        }
+    }
+}
+
+// ───────────────────────────── Rendering ─────────────────────────────
+
+@Composable
+private fun CueLayer(spec: AiVisualCueSpec, frame: CueFrame, timeMs: Float, background: Shader?) {
+    Box(Modifier.fillMaxSize()) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ShaderCue(spec, frame, timeMs, background)
+        } else {
+            FallbackCue(spec, frame)
+        }
+        CueComponents(frame)
+    }
+}
+
+private class CueStops(stops: List<CueStop>) {
+    private val sorted = stops.sortedBy { it.position }.ifEmpty { listOf(CueStop(0xFF3A77FF, 0f)) }
+    val count = sorted.size.toFloat()
+    val lab: List<FloatArray> = List(3) { i -> srgbToOklab(sorted[min(i, sorted.size - 1)].argb) }
+    val pos: FloatArray
+
+    init {
+        val p0 = sorted[0].position
+        val p1 = max(sorted.getOrElse(1) { sorted.last() }.position, p0 + 0.01f)
+        val p2 = max(sorted.getOrElse(2) { sorted.last() }.position, p1 + 0.01f)
+        pos = floatArrayOf(p0, p1, p2)
+    }
+}
+
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
+@Composable
+private fun ShaderCue(spec: AiVisualCueSpec, frame: CueFrame, timeMs: Float, background: Shader?) {
+    val shader = remember { RuntimeShader(CUE_AGSL) }
+    val stops = remember(spec.stops) { CueStops(spec.stops) }
+    Canvas(Modifier.fillMaxSize()) {
+        val p = frame.pose
+        val t = timeMs / 1000f
+        val mp = spec.materialParams
+        val angle = spec.gradientAngleDeg * PI.toFloat() / 180f
+        shader.setFloatUniform("uRes", size.width, size.height)
+        shader.setFloatUniform("uScale", density)
+        shader.setFloatUniform("uCenter", p.cx, p.cy)
+        shader.setFloatUniform("uHalf", p.hx, p.hy)
+        shader.setFloatUniform("uRadius", p.r)
+        shader.setFloatUniform("uElev", p.elev)
+        shader.setFloatUniform("uBevel", p.bevel)
+        shader.setFloatUniform("uShadow", p.shadow * spec.shadowStrength)
+        shader.setFloatUniform("uShadowBlur", spec.shadowBlur * (0.4f + 0.6f * p.elev))
+        shader.setFloatUniform("uShadowOff", spec.shadowOffset * p.elev)
+        shader.setFloatUniform("uFill", p.fill)
+        shader.setFloatUniform("uGlowW", frame.glowW)
+        shader.setFloatUniform("uGlow", spec.glow)
+        shader.setFloatUniform("uScrim", if (spec.scrim) p.scrim else 0f)
+        shader.setFloatUniform("uPhase", frame.phase)
+        shader.setFloatUniform("uPhaseAmt", frame.phaseAmt)
+        shader.setFloatUniform(
+            "uHl",
+            spec.highlightX + sin(t * 0.6f) * 0.10f * spec.highlightDrift,
+            spec.highlightY + cos(t * 0.45f) * 0.07f * spec.highlightDrift,
+        )
+        shader.setFloatUniform("uTime", t)
+        shader.setFloatUniform("uP", mp[0], mp[1], mp[2], mp[3])
+        shader.setFloatUniform("uC0", stops.lab[0][0], stops.lab[0][1], stops.lab[0][2])
+        shader.setFloatUniform("uC1", stops.lab[1][0], stops.lab[1][1], stops.lab[1][2])
+        shader.setFloatUniform("uC2", stops.lab[2][0], stops.lab[2][1], stops.lab[2][2])
+        shader.setFloatUniform("uPos", stops.pos[0], stops.pos[1], stops.pos[2])
+        shader.setFloatUniform("uStopCount", stops.count)
+        shader.setFloatUniform("uGradType", if (spec.linearGradient) 1f else 0f)
+        shader.setFloatUniform("uDir", cos(angle), sin(angle))
+        shader.setFloatUniform("uNeutral", 0.92f, 0.92f, 0.93f)
+        shader.setFloatUniform("uEdgeSoft", spec.edgeSoftness)
+        shader.setFloatUniform("uOpacity", frame.opacity)
+${glass?`        // Frosted Glass refracts whatever you pass as [background]
+        // (e.g. a BitmapShader of the screen behind the cue). Default: a soft surface gradient.
+        shader.setInputShader("uBg", background ?: LinearGradient(0f, 0f, 0f, size.height, 0xFFF4F5F8.toInt(), 0xFFE2E5EE.toInt(), Shader.TileMode.CLAMP))
+`:''}        drawRect(brush = ShaderBrush(shader))
+    }
+}
+
+/** API 26–32: same shapes, timing and colors, simplified material. */
+@Composable
+private fun FallbackCue(spec: AiVisualCueSpec, frame: CueFrame) {
+    val sorted = remember(spec.stops) { spec.stops.sortedBy { it.position } }
+    Canvas(Modifier.fillMaxSize()) {
+        val p = frame.pose
+        val d = density
+        if (spec.scrim) drawRect(Color.Black.copy(alpha = p.scrim))
+        val hx = max(p.hx, 0.5f)
+        val hy = max(p.hy, 0.5f)
+        val r = min(p.r, min(hx, hy)) * d
+        val topLeft = Offset((p.cx - hx) * d, (p.cy - hy) * d)
+        val sz = Size(hx * 2f * d, hy * 2f * d)
+        val o = frame.opacity
+        val shadowA = 0.22f * p.shadow * spec.shadowStrength * o
+        if (shadowA > 0.005f) {
+            drawRoundRect(
+                color = Color(sorted.first().argb).copy(alpha = shadowA),
+                topLeft = topLeft + Offset(0f, spec.shadowOffset * p.elev * d),
+                size = sz,
+                cornerRadius = CornerRadius(r),
+            )
+        }
+        val colorStops = if (sorted.size == 1) {
+            arrayOf(0f to Color(sorted[0].argb), 1f to Color(sorted[0].argb))
+        } else {
+            sorted.map { it.position to Color(it.argb) }.toTypedArray()
+        }
+        val brush = Brush.radialGradient(
+            *colorStops,
+            center = Offset((p.cx + spec.highlightX * hx) * d, (p.cy + spec.highlightY * hy) * d),
+            radius = max(hx, hy) * 1.35f * d,
+        )
+        if (p.fill > 0.01f) {
+            drawRoundRect(brush = brush, topLeft = topLeft, size = sz, cornerRadius = CornerRadius(r), alpha = p.fill * o)
+        }
+        if (p.fill < 0.99f) {
+            val sw = frame.glowW * d
+            drawRoundRect(
+                brush = brush,
+                topLeft = topLeft + Offset(sw / 2f, sw / 2f),
+                size = Size(max(sz.width - sw, 1f), max(sz.height - sw, 1f)),
+                cornerRadius = CornerRadius(max(r - sw / 2f, 0f)),
+                alpha = (1f - p.fill) * o,
+                style = Stroke(width = sw),
+            )
+        }
+    }
+}
+
+/** The list that appears where the cue settles (L2). Replace with your own content. */
+@Composable
+private fun CueComponents(frame: CueFrame) {
+    val p = frame.pose
+    val pad = 16f
+    val gap = 10f
+    val rowH = (p.hy * 2f - pad * 2f - gap * 2f) / 3f
+    val rowW = p.hx * 2f - pad * 2f
+    if (rowH <= 8f || rowW <= 40f) return
+    for (i in 0 until 3) {
+        val a = frame.items[i]
+        if (a <= 0.001f) continue
+        val x = p.cx - p.hx + pad
+        val y = p.cy - p.hy + pad + i * (rowH + gap) + (1f - a) * 10f
+        val icon = min(28f, rowH - 12f)
+        Box(
+            Modifier
+                .offset(x.dp, y.dp)
+                .size(rowW.dp, rowH.dp)
+                .graphicsLayer { alpha = a }
+                .background(Color.White.copy(alpha = 0.22f), RoundedCornerShape(14.dp)),
+        ) {
+            Box(Modifier.offset(12.dp, ((rowH - icon) / 2f).dp).size(icon.dp).background(Color.White.copy(alpha = 0.88f), CircleShape))
+            Box(Modifier.offset((24f + icon).dp, (rowH / 2f - 10f).dp).size((rowW * 0.45f).dp, 7.dp).background(Color.White.copy(alpha = 0.88f), RoundedCornerShape(4.dp)))
+            Box(Modifier.offset((24f + icon).dp, (rowH / 2f + 3f).dp).size((rowW * 0.28f).dp, 6.dp).background(Color.White.copy(alpha = 0.55f), RoundedCornerShape(3.dp)))
+        }
+    }
+}
+
+private fun srgbToOklab(argb: Long): FloatArray {
+    fun lin(c: Long): Float {
+        val v = c / 255f
+        return if (v <= 0.04045f) v / 12.92f else ((v + 0.055f) / 1.055f).pow(2.4f)
+    }
+    val r = lin((argb shr 16) and 0xFFL)
+    val g = lin((argb shr 8) and 0xFFL)
+    val b = lin(argb and 0xFFL)
+    val l = (0.4122214708f * r + 0.5363325363f * g + 0.0514459929f * b).toDouble().pow(1.0 / 3.0).toFloat()
+    val m = (0.2119034982f * r + 0.6806995451f * g + 0.1073969566f * b).toDouble().pow(1.0 / 3.0).toFloat()
+    val s = (0.0883024619f * r + 0.2817188376f * g + 0.6299787005f * b).toDouble().pow(1.0 / 3.0).toFloat()
+    return floatArrayOf(
+        0.2104542553f * l + 0.7936177850f * m - 0.0040720468f * s,
+        1.9779984951f * l - 2.4285922050f * m + 0.4505937099f * s,
+        0.0259040371f * l + 0.7827717662f * m - 0.8086757660f * s,
+    )
+}
+
+@Preview(widthDp = 360, heightDp = 780, showBackground = true, backgroundColor = 0xFFF3F4F6)
+@Composable
+private fun AiVisualCuePreview() {
+    AiVisualCueDemoLoop()
+}
+
+// ───────────────────────────── AGSL (same source as the web preview) ─────────────────────────────
+
+private const val CUE_AGSL = """
+${agslSource(S.material).trim()}
+"""
+`;
+}
+function genJson(){ return JSON.stringify(S, null, 2); }
+
+let codeMode = 'kotlin', codeTimer = 0, codeText = '';
+const codeOut = $('#codeOut');
+const KW = new Set('package import fun val var private data class enum object if else for in while return when true false null by remember const override is as this until continue break internal'.split(' '));
+const GLSL_KW = new Set('uniform float float2 float3 float4 half4 shader return if else for'.split(' '));
+function highlight(src, lang){
+  const re = /("""[\s\S]*?"""|"(?:\\.|[^"\\\n])*"|\/\/[^\n]*|\/\*[\s\S]*?\*\/|@[A-Za-z]+|\b0x[0-9A-Fa-f]+L?\b|\b\d+(?:\.\d+)?(?:[eE][-+]?\d+)?[fL]?\b|\b[A-Za-z_]\w*\b)/g;
+  let out = '', last = 0, m;
+  const kw = lang==='agsl' ? GLSL_KW : KW;
+  while((m = re.exec(src))){
+    out += escapeHtml(src.slice(last, m.index)); const t = m[0]; last = re.lastIndex;
+    let cls = null;
+    if(t.startsWith('"""')){ // raw string: highlight the embedded AGSL lightly
+      out += '<span class="t-str">"""</span>' + highlight(t.slice(3,-3),'agsl') + '<span class="t-str">"""</span>'; continue;
+    }
+    if(t[0]==='"') cls='t-str'; else if(t.startsWith('//')||t.startsWith('/*')) cls='t-com'; else if(t[0]==='@') cls='t-ann';
+    else if(/^\d|^0x/.test(t)) cls='t-num'; else if(kw.has(t)) cls='t-kw'; else if(/^[A-Z]/.test(t)) cls='t-type';
+    out += cls ? `<span class="${cls}">${escapeHtml(t)}</span>` : escapeHtml(t);
+  }
+  return out + escapeHtml(src.slice(last));
+}
+function renderCode(){
+  codeText = codeMode==='kotlin' ? genKotlin() : codeMode==='agsl' ? agslSource(S.material) : genJson();
+  codeOut.innerHTML = highlight(codeText, codeMode==='json'?'json':codeMode);
+  const lines = codeText.split('\n').length;
+  $('#codeMeta').innerHTML = codeMode==='kotlin'
+    ? `<span><b>AiVisualCue.kt</b> · ${lines}줄 · 물성 ${MATS[S.material].en} · 루프 ${(TL.len/1000/S.speed).toFixed(2)}s</span><span>minSdk 26 · Android 13(API 33)+ AGSL 셰이더 · API 26–32는 그라데이션으로 대체</span>`
+    : codeMode==='agsl' ? `<span><b>cue.agsl</b> · ${lines}줄 · 웹 프리뷰와 같은 소스 (GLSL은 타입 이름만 매크로로 치환)</span><span>RuntimeShader(CUE_AGSL) · setFloatUniform으로 값 전달</span>`
+    : `<span><b>spec.json</b> · 현재 설정 전체</span><span>프리뷰와 코드가 모두 이 값에서 만들어집니다</span>`;
+}
+function scheduleCode(){ clearTimeout(codeTimer); codeTimer = setTimeout(()=>{ if(!$('#paneCode').hidden) renderCode(); }, 120); }
+segCtrl($('#codeMode'), ()=>codeMode, v=>{ codeMode=v; renderCode(); });
+$('#copyBtn').onclick = ()=>{
+  const done = ()=>toast(codeMode==='kotlin'?'Kotlin 코드를 복사했습니다':'복사했습니다');
+  const fallback = ()=>{ const r=document.createRange(); r.selectNodeContents(codeOut); const sel=getSelection(); sel.removeAllRanges(); sel.addRange(r); toast('코드를 선택했습니다. ⌘C / Ctrl+C로 복사하세요'); };
+  try{ navigator.clipboard.writeText(codeText).then(done, fallback); }catch(e){ fallback(); }
+};
+
+let toastTimer=0;
+function toast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),1800); }
+
+/* ======================================================================
+   10. Tabs, theme, boot
+   ====================================================================== */
+function selectTab(which){
+  const cue = which==='cue';
+  $('#tab-btn-cue').setAttribute('aria-selected', cue); $('#tab-btn-about').setAttribute('aria-selected', !cue);
+  $('#view-cue').hidden = !cue; $('#view-about').hidden = cue;
+  if(cue) layout();
+}
+$('#tab-btn-cue').onclick = ()=>selectTab('cue');
+$('#tab-btn-about').onclick = ()=>selectTab('about');
+function selectSub(which){
+  const d = which==='design';
+  $('#sub-design').setAttribute('aria-selected', d); $('#sub-code').setAttribute('aria-selected', !d);
+  $('#paneDesign').hidden = !d; $('#paneCode').hidden = d;
+  if(!d) renderCode();
+}
+$('#sub-design').onclick = ()=>selectSub('design');
+$('#sub-code').onclick = ()=>selectSub('code');
+
+const themeBtn = $('#themeBtn');
+function paintThemeBtn(){ const dark = effectiveDark(); themeBtn.textContent = dark ? '☀︎' : '☾'; themeBtn.setAttribute('aria-label', dark ? '라이트 모드로 전환' : '다크 모드로 전환'); }
+function applyTheme(t){ if(t) document.documentElement.setAttribute('data-theme', t); paintThemeBtn(); layout(); scheduleThumbs(); }
+themeBtn.onclick = ()=>{ const t = effectiveDark() ? 'light' : 'dark'; try{ localStorage.setItem('avc-theme', t); }catch(e){} applyTheme(t); };
+try{ const t = localStorage.getItem('avc-theme'); if(t==='dark'||t==='light') document.documentElement.setAttribute('data-theme', t); }catch(e){}
+if(window.matchMedia) matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', ()=>{ paintThemeBtn(); layout(); scheduleThumbs(); });
+new MutationObserver(()=>{ paintThemeBtn(); layout(); scheduleThumbs(); }).observe(document.documentElement, { attributes:true, attributeFilter:['data-theme'] });
+
+repaintAll();
+paintThemeBtn();
+setView(view);
+renderThumbs();
+if(document.fonts && document.fonts.ready) document.fonts.ready.then(()=>{ layout(); paintGrad(); });
+requestAnimationFrame(t=>{ last=t; tick(t); });
+</script>
+</body>
+</html>
