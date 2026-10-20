@@ -53,6 +53,7 @@ import androidx.compose.ui.graphics.ShaderBrush
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -83,6 +84,9 @@ data class AiVisualCueSpec(
     val materialParams: List<Float> = listOf(0.35f, 0.5f, 0.8f, 0f), // 외곽 글로우 · 림 라이트 · 가장자리 부드러움
     val glow: Float = 0.35f,
     val edgeSoftness: Float = 0.8f,
+    val listAccent: Long = 0xFF6449F5,
+    val listSurface: Long? = null,   // null = follow the system theme
+    val shadowColor: Long = 0xFF2D216E,
     val sphereDiameter: Float = 92f,
     val cardHeight: Float = 220f,
     val cardThickness: Float = 8f,
@@ -359,14 +363,15 @@ private fun rememberCueTimeMs(): State<Float> = produceState(0f) {
 @Composable
 private fun CueLayer(spec: AiVisualCueSpec, frame: CueFrame, timeMs: Float, background: Shader?) {
     val dark = isSystemInDarkTheme()
-    val accent = remember(spec.stops) { Color(spec.stops.minByOrNull { it.position }?.argb ?: 0xFF3A77FF) }
+    val accent = Color(spec.listAccent)
+    val surface = spec.listSurface?.let { Color(it) }
     Box(Modifier.fillMaxSize()) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             ShaderCue(spec, frame, timeMs, background)
         } else {
             FallbackCue(spec, frame)
         }
-        CueComponents(frame, accent, dark)
+        CueComponents(frame, accent, surface, dark)
     }
 }
 
@@ -427,6 +432,8 @@ private fun ShaderCue(spec: AiVisualCueSpec, frame: CueFrame, timeMs: Float, bac
         shader.setFloatUniform("uNeutral", 0.92f, 0.92f, 0.93f)
         shader.setFloatUniform("uEdgeSoft", spec.edgeSoftness)
         shader.setFloatUniform("uOpacity", frame.opacity)
+        val sc = Color(spec.shadowColor)
+        shader.setFloatUniform("uShadowCol", sc.red, sc.green, sc.blue)
         drawRect(brush = ShaderBrush(shader))
     }
 }
@@ -448,7 +455,7 @@ private fun FallbackCue(spec: AiVisualCueSpec, frame: CueFrame) {
         val shadowA = 0.22f * p.shadow * spec.shadowStrength * o
         if (shadowA > 0.005f) {
             drawRoundRect(
-                color = Color(sorted.first().argb).copy(alpha = shadowA),
+                color = Color(spec.shadowColor).copy(alpha = shadowA),
                 topLeft = topLeft + Offset(0f, spec.shadowOffset * p.elev * d),
                 size = sz,
                 cornerRadius = CornerRadius(r),
@@ -483,13 +490,15 @@ private fun FallbackCue(spec: AiVisualCueSpec, frame: CueFrame) {
 
 /** The list that appears where the cue settles (L2) and re-flows to full screen (L3). Replace with your own content. */
 @Composable
-private fun CueComponents(frame: CueFrame, accent: Color, dark: Boolean) {
+private fun CueComponents(frame: CueFrame, accent: Color, surface: Color?, dark: Boolean) {
     val cardBg = Color.White.copy(alpha = 0.22f)
     val cardBar = Color.White.copy(alpha = 0.88f)
     val cardBar2 = Color.White.copy(alpha = 0.55f)
-    val fullBg = if (dark) Color(0xDB1E2028) else Color(0xDBFFFFFF)
-    val fullBar = if (dark) Color(0x99EBEDF5) else Color(0x8C161820)
-    val fullBar2 = if (dark) Color(0x4DEBEDF5) else Color(0x47161820)
+    val base = surface ?: if (dark) Color(0xFF1E2028) else Color.White
+    val fullBg = base.copy(alpha = 0.86f)
+    val lightSurface = base.luminance() > 0.5f
+    val fullBar = if (lightSurface) Color(0x8C161820) else Color(0x99EBEDF5)
+    val fullBar2 = if (lightSurface) Color(0x47161820) else Color(0x4DEBEDF5)
     for (item in frame.items) {
         if (item.a <= 0.001f || item.h < 8f) continue
         val icon = min(mixf(28f, 40f, item.sf), item.h - 12f)
@@ -501,7 +510,7 @@ private fun CueComponents(frame: CueFrame, accent: Color, dark: Boolean) {
                 .background(lerp(cardBg, fullBg, item.sf), RoundedCornerShape(14.dp)),
         ) {
             Box(Modifier.offset(12.dp, ((item.h - icon) / 2f).dp).size(icon.dp).background(lerp(cardBar, accent.copy(alpha = 0.95f), item.sf), CircleShape))
-            Box(Modifier.offset((24f + icon).dp, (item.h / 2f - 10f).dp).size((item.w * 0.45f).dp, 7.dp).background(lerp(cardBar, fullBar, item.sf), RoundedCornerShape(4.dp)))
+            Box(Modifier.offset((24f + icon).dp, (item.h / 2f - 10f).dp).size((item.w * 0.45f).dp, 7.dp).background(lerp(cardBar, fullBar, item.sf), RoundedCornerShape(3.5.dp)))
             Box(Modifier.offset((24f + icon).dp, (item.h / 2f + 3f).dp).size((item.w * 0.28f).dp, 6.dp).background(lerp(cardBar2, fullBar2, item.sf), RoundedCornerShape(3.dp)))
         }
     }
@@ -565,6 +574,7 @@ uniform float2 uDir;
 uniform float3 uNeutral;
 uniform float uEdgeSoft;
 uniform float uOpacity;
+uniform float3 uShadowCol;
 
 float sdRound(float2 p, float2 b, float r) {
     float2 q = abs(p) - b + float2(r);
@@ -650,7 +660,7 @@ float4 cue(float2 fc) {
     float ds = sdRound(lp - float2(0.0, uShadowOff), hb * 0.9, rr * 0.9);
     float sb = max(uShadowBlur, 1.0);
     float sa = (1.0 - smoothstep(-sb, sb, ds)) * uShadow * 0.38;
-    float3 scol = ramp(0.0) * 0.45;
+    float3 scol = uShadowCol;
 
     float4 o = float4(0.0, 0.0, 0.0, uScrim);
     o = over(float4(scol * sa, sa), o);

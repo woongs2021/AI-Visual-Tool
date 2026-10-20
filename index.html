@@ -85,8 +85,41 @@ button,input,select{font:inherit;color:inherit}
 .stop.sel .sq{outline:2px solid #fff;outline-offset:2px;box-shadow:0 0 0 4px rgba(0,0,0,.25)}
 .stop.dark-label.sel .sq{outline-color:#1B1D24}
 .grad-pos{position:absolute;right:12px;bottom:10px;font-family:var(--f-mono);font-size:11px;color:#fff;opacity:.85}
-.stop-edit{display:grid;grid-template-columns:40px 1fr 1fr auto;gap:8px;align-items:center}
-.stop-edit input[type=color]{width:40px;height:34px;padding:0;border:1px solid var(--line);border-radius:var(--r-s);background:var(--raise);cursor:pointer}
+.stop-edit{display:grid;grid-template-columns:34px 1fr 1fr auto;gap:8px;align-items:center}
+.swatch-btn{width:34px;height:34px;padding:0;border:1px solid var(--line);border-radius:var(--r-s);cursor:pointer;box-shadow:inset 0 0 0 2px var(--raise);flex:none}
+.sec-h .hint{margin-left:auto}
+.sub-h{font-size:12px;color:var(--muted);margin-top:4px}
+.color-rows{display:flex;flex-direction:column;gap:8px}
+.crow{display:flex;align-items:center;gap:10px}
+.crow-t{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.3}
+.crow-t span{font-size:12px}
+.crow-t small{font-size:11px;color:var(--faint)}
+.rst{border:0;background:none;color:var(--accent);cursor:pointer;font-size:13px;line-height:1;padding:0 2px;margin-left:6px}
+.row-label .rv{display:inline-flex;align-items:center}
+.pane-foot{padding:18px 0 4px;display:flex;justify-content:flex-end}
+/* color picker popover */
+.picker{position:fixed;z-index:30;width:240px;padding:12px;border-radius:var(--r-m);background:var(--raise);border:1px solid var(--line);box-shadow:0 20px 50px -20px rgba(10,14,40,.45);display:flex;flex-direction:column;gap:10px}
+.pk-sv{position:relative;height:150px;border-radius:6px;cursor:crosshair;touch-action:none}
+.pk-sv i{position:absolute;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.3);pointer-events:none}
+.pk-hue{-webkit-appearance:none;appearance:none;width:100%;height:12px;border-radius:6px;background:linear-gradient(90deg,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00);cursor:pointer}
+.pk-hue::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:#fff;border:1.5px solid #222}
+.pk-hue::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:#fff;border:1.5px solid #222}
+.pk-row{display:flex;gap:8px;align-items:center}
+.pk-prev{width:34px;height:34px;border-radius:var(--r-s);border:1px solid var(--line);flex:none}
+.pk-sw{display:grid;grid-template-columns:repeat(10,1fr);gap:4px}
+.pk-sw button{aspect-ratio:1;border:1px solid rgba(0,0,0,.08);border-radius:4px;cursor:pointer;padding:0}
+/* export */
+.stage{position:relative}
+.export-btn{height:32px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:var(--raise);cursor:pointer;font-weight:500;white-space:nowrap}
+.export-pop{position:absolute;z-index:15;top:52px;right:max(16px,env(safe-area-inset-right,0px));width:300px;padding:14px;border-radius:var(--r-m);background:var(--raise);border:1px solid var(--line);box-shadow:0 20px 50px -20px rgba(10,14,40,.45);display:flex;flex-direction:column;gap:12px}
+.export-pop h4{margin:0;font-size:13px;font-weight:600}
+.ex-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ex-btns .copy-btn{height:36px}
+.ex-btns .copy-btn:disabled{opacity:.45;cursor:progress}
+.ex-prog{display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--muted)}
+.ex-bar{height:4px;border-radius:2px;background:var(--line-soft);overflow:hidden}
+.ex-bar i{display:block;height:100%;width:0;background:var(--ink);transition:width .1s}
+.ex-note{margin:0;font-size:11.5px;color:var(--faint);line-height:1.5}
 .field{height:34px;border:1px solid var(--line);border-radius:var(--r-s);background:var(--raise);padding:0 10px;min-width:0;width:100%}
 .field.mono{font-size:12px;text-transform:uppercase}
 .icon-btn{height:34px;min-width:34px;border:1px solid var(--line);border-radius:var(--r-s);background:var(--raise);cursor:pointer;padding:0 10px;white-space:nowrap}
@@ -147,9 +180,8 @@ pre.code{margin:0;padding:16px 20px 40px;font-family:var(--f-mono);font-size:11.
 .device{position:relative;overflow:hidden;border-radius:30px;box-shadow:0 0 0 1px var(--line),0 18px 50px -24px rgba(10,14,40,.35);background:#000;isolation:isolate}
 .device canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 .comp{position:absolute;inset:0;pointer-events:none}
-.comp .item{position:absolute;left:0;top:0;border-radius:14px;background:var(--rb,rgba(255,255,255,.22));will-change:transform,opacity}
-.comp .item::before{content:"";position:absolute;left:12px;top:50%;width:var(--ic);height:var(--ic);margin-top:calc(var(--ic) / -2);border-radius:50%;background:var(--ri,rgba(255,255,255,.88))}
-.comp .item::after{content:"";position:absolute;left:calc(24px + var(--ic));top:calc(50% - 10px);width:45%;height:7px;border-radius:4px;background:var(--r1,rgba(255,255,255,.88));box-shadow:0 13px 0 -1px var(--r2,rgba(255,255,255,.55))}
+.comp .item{position:absolute;left:0;top:0;will-change:transform,opacity}
+.comp .item i{position:absolute;left:0;top:0;display:block}
 .hud{position:absolute;inset:0;pointer-events:none;font-family:var(--f-ui);color:var(--hud,#6b7080)}
 .hud span{position:absolute;font-weight:600}
 .cap{font-size:12px;color:var(--muted);display:flex;gap:8px;align-items:center}
@@ -228,11 +260,11 @@ pre.code{margin:0;padding:16px 20px 40px;font-family:var(--f-mono);font-size:11.
 
     <div class="pane pane-design" id="paneDesign">
       <section class="sec" aria-labelledby="h-color">
-        <div class="sec-h"><h3 id="h-color">컬러</h3><span class="hint">스톱 최대 3개 · 칩을 위아래로 드래그</span></div>
+        <div class="sec-h"><h3 id="h-color">컬러</h3><span class="hint">칩 클릭: 색 변경 · 드래그: 위치</span><button class="link-btn" type="button" data-reset="color">초기화</button></div>
         <div class="presets" id="presets"></div>
         <div class="grad" id="grad"><div class="grad-rail"></div><span class="grad-pos" id="gradPos"></span></div>
         <div class="stop-edit">
-          <input type="color" id="stopColor" aria-label="스톱 색상">
+          <button class="swatch-btn" id="stopColor" type="button" aria-label="스톱 색 변경" title="색 변경"></button>
           <input class="field mono" id="stopHex" aria-label="HEX" maxlength="7" spellcheck="false">
           <input class="field" id="stopName" aria-label="스톱 이름" maxlength="16" placeholder="이름">
           <button class="icon-btn danger" id="stopDel" type="button" title="스톱 삭제">삭제</button>
@@ -244,22 +276,24 @@ pre.code{margin:0;padding:16px 20px 40px;font-family:var(--f-mono);font-size:11.
           </div>
         </div>
         <div class="ctrl-grid" id="colorCtrls"></div>
+        <div class="sub-h">추가 색상</div>
+        <div class="color-rows" id="colorRows"></div>
       </section>
 
       <section class="sec" aria-labelledby="h-mat">
-        <div class="sec-h"><h3 id="h-mat">물성</h3><span class="hint" id="matHint"></span></div>
+        <div class="sec-h"><h3 id="h-mat">물성</h3><span class="hint" id="matHint"></span><button class="link-btn" type="button" data-reset="mat">초기화</button></div>
         <div class="mats" id="mats"></div>
         <p class="mat-desc" id="matDesc"></p>
         <div class="ctrl-grid" id="matCtrls"></div>
       </section>
 
       <section class="sec" aria-labelledby="h-size">
-        <div class="sec-h"><h3 id="h-size">크기</h3><span class="hint">단위 dp · 화면 360 × 780</span></div>
+        <div class="sec-h"><h3 id="h-size">크기</h3><span class="hint">단위 dp · 화면 360 × 780</span><button class="link-btn" type="button" data-reset="size">초기화</button></div>
         <div class="ctrl-grid" id="sizeCtrls"></div>
       </section>
 
       <section class="sec" aria-labelledby="h-motion">
-        <div class="sec-h"><h3 id="h-motion">모션</h3><span class="hint" id="loopHint"></span></div>
+        <div class="sec-h"><h3 id="h-motion">모션</h3><span class="hint" id="loopHint"></span><button class="link-btn" type="button" data-reset="motion">초기화</button></div>
         <div class="ctrl"><div class="row-label"><span>전환 방식</span></div>
           <div class="seg" id="transStyle" role="group" aria-label="전환 방식"><button type="button" data-v="morph">모프</button><button type="button" data-v="phase">위상 회전</button></div></div>
         <div class="ctrl"><div class="row-label"><span>이징</span><output class="mono" id="easeOut"></output></div>
@@ -268,9 +302,10 @@ pre.code{margin:0;padding:16px 20px 40px;font-family:var(--f-mono);font-size:11.
       </section>
 
       <section class="sec" aria-labelledby="h-shadow">
-        <div class="sec-h"><h3 id="h-shadow">그림자</h3><button class="link-btn" id="resetAll" type="button">전체 기본값으로</button></div>
+        <div class="sec-h"><h3 id="h-shadow">그림자</h3><button class="link-btn" type="button" data-reset="shadow">초기화</button></div>
         <div class="ctrl-grid" id="shadowCtrls"></div>
       </section>
+      <div class="pane-foot"><button class="icon-btn" id="resetAll" type="button">전체 초기화</button></div>
     </div>
 
     <div class="pane pane-code" id="paneCode" hidden>
@@ -291,8 +326,18 @@ pre.code{margin:0;padding:16px 20px 40px;font-family:var(--f-mono);font-size:11.
       <button class="nav-btn" id="prevView" type="button" aria-label="이전 뷰">←</button>
       <div class="stage-title"><b id="viewName"></b><span id="viewDesc"></span></div>
       <span class="spacer"></span>
+      <button class="export-btn" id="exportBtn" type="button" aria-haspopup="dialog" aria-expanded="false">⤓ 내보내기</button>
       <div class="dots" id="dots" aria-label="뷰 선택"></div>
       <button class="nav-btn" id="nextView" type="button" aria-label="다음 뷰">→</button>
+    </div>
+    <div class="export-pop" id="exportPop" role="dialog" aria-label="루프 내보내기" hidden>
+      <h4>루프 1회 내보내기</h4>
+      <div class="seg" id="exTarget" role="group" aria-label="대상">
+        <button type="button" data-v="A">① 비주얼 큐</button><button type="button" data-v="B">② 앱 적용</button><button type="button" data-v="both">전체 비교</button>
+      </div>
+      <div class="ex-btns"><button class="copy-btn" id="exMp4" type="button">MP4 저장</button><button class="copy-btn" id="exGif" type="button">GIF 저장</button></div>
+      <div class="ex-prog" id="exProg" hidden><div class="ex-bar"><i id="exBar"></i></div><span id="exMsg"></span></div>
+      <p class="ex-note">현재 설정 그대로, 루프 처음부터 끝까지 한 번을 렌더링합니다. MP4는 720 × 1560 · 30fps, GIF는 360 × 780 · 15fps이고 무한 반복으로 저장됩니다.</p>
     </div>
     <div class="stage-body" id="stageBody">
       <div class="frames" id="frames">
@@ -340,6 +385,8 @@ pre.code{margin:0;padding:16px 20px 40px;font-family:var(--f-mono);font-size:11.
       <ol>
         <li>Design 탭에서 컬러(그라데이션 스톱 최대 3개), 물성, 크기, 모션을 조절합니다. 프리뷰는 바로 바뀝니다.</li>
         <li>프리뷰는 3개 뷰로 볼 수 있습니다. 좌우 화살표, 키보드 ←/→, 드래그로 넘깁니다. 스페이스바로 재생을 멈춥니다.</li>
+        <li>각 슬라이더 옆 ↺ 버튼으로 그 값만, 섹션 제목 옆 "초기화"로 섹션 전체를, 맨 아래 "전체 초기화"로 모든 설정을 기본값으로 되돌립니다.</li>
+        <li>프리뷰 위 "내보내기"에서 루프 한 번을 MP4(720 × 1560, 30fps) 또는 GIF(360 × 780, 15fps, 무한 반복)로 저장합니다.</li>
         <li>Code 탭에서 Kotlin 파일 전체를 복사해 Android 프로젝트에 붙여넣고 <span class="mono">AiVisualCueDemoLoop()</span> 또는 <span class="mono">AiVisualCue(level)</span>을 호출합니다.</li>
       </ol>
     </div>
@@ -373,6 +420,12 @@ pre.code{margin:0;padding:16px 20px 40px;font-family:var(--f-mono);font-size:11.
 </main>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="picker" id="picker" role="dialog" aria-label="색 선택" hidden>
+  <div class="pk-sv" id="pkSV"><i id="pkDot"></i></div>
+  <input type="range" class="pk-hue" id="pkHue" min="0" max="360" step="1" aria-label="색상">
+  <div class="pk-row"><i class="pk-prev" id="pkPrev"></i><input class="field mono" id="pkHex" maxlength="7" spellcheck="false" aria-label="HEX"><button class="icon-btn" id="pkDone" type="button">완료</button></div>
+  <div class="pk-sw" id="pkSw"></div>
+</div>
 
 <script>
 "use strict";
@@ -408,6 +461,7 @@ function defaultSpec(){
     shadow:0.6, shadowBlur:18, shadowOff:14,
     speed:1, transMs:800, fadeMs:600, l1Hold:2600, l2Hold:2600, l3Hold:2600, settleMs:350,
     floatAmp:3, floatPeriod:2400, drift:0.6, stagger:60, transition:'morph', easing:'reference',
+    listAccent:null, listSurface:null, shadowColor:null, bgColor:null,   // null = automatic
   };
 }
 function loadSpec(){
@@ -561,7 +615,7 @@ const UNIFORMS = [
   ['float','uShadow'],['float','uShadowBlur'],['float','uShadowOff'],['float','uFill'],['float','uGlowW'],['float','uGlow'],['float','uScrim'],
   ['float','uPhase'],['float','uPhaseAmt'],['float2','uHl'],['float','uTime'],['float4','uP'],
   ['float3','uC0'],['float3','uC1'],['float3','uC2'],['float3','uPos'],['float','uStopCount'],['float','uGradType'],['float2','uDir'],
-  ['float3','uNeutral'],['float','uEdgeSoft'],['float','uOpacity'],
+  ['float3','uNeutral'],['float','uEdgeSoft'],['float','uOpacity'],['float3','uShadowCol'],
 ];
 const SH_COMMON = `
 float sdRound(float2 p, float2 b, float r) {
@@ -706,7 +760,7 @@ float4 cue(float2 fc) {
     float ds = sdRound(lp - float2(0.0, uShadowOff), hb * 0.9, rr * 0.9);
     float sb = max(uShadowBlur, 1.0);
     float sa = (1.0 - smoothstep(-sb, sb, ds)) * uShadow * 0.38;
-    float3 scol = ramp(0.0) * 0.45;
+    float3 scol = uShadowCol;
 
     float4 o = float4(0.0, 0.0, 0.0, uScrim);
     o = over(float4(scol * sa, sa), o);
@@ -802,16 +856,23 @@ function buildUniforms(fr, scale, resW, resH, withScrim, timeS){
     uP:[mp[0]||0,mp[1]||0,mp[2]||0,mp[3]||0], uC0:su.lab[0], uC1:su.lab[1], uC2:su.lab[2], uPos:su.pos, uStopCount:su.count,
     uGradType:S.gradType==='linear'?1:0, uDir:[Math.cos(a),Math.sin(a)],
     uNeutral: dark?[0.20,0.21,0.24]:[0.92,0.92,0.93], uEdgeSoft:S.material==='softGlow'?mp[2]:0.75, uOpacity:fr.opacity==null?1:fr.opacity,
+    uShadowCol: hexToRgb(shadowHex()),
   };
 }
 
 /* ======================================================================
    5. Backgrounds — ① neutral dot grid, ② app mock (also fed to glass)
    ====================================================================== */
+const toHex = rgb => '#'+rgb.map(v=>Math.round(Math.max(0,Math.min(1,v))*255).toString(16).padStart(2,'0')).join('').toUpperCase();
+const accentHex  = () => S.listAccent  || sortedStops()[0].color;
+const surfaceHex = () => S.listSurface || (effectiveDark() ? '#1E2028' : '#FFFFFF');
+const shadowHex  = () => S.shadowColor || toHex(hexToRgb(sortedStops()[0].color).map(v=>v*0.45));
+const bgHex      = () => S.bgColor     || (effectiveDark() ? '#101116' : '#F3F4F6');
 function drawGridBg(ctx, W, H, s, dark){
   ctx.setTransform(s,0,0,s,0,0);
-  ctx.fillStyle = dark ? '#101116' : '#F3F4F6'; ctx.fillRect(0,0,W,H);
-  ctx.fillStyle = dark ? 'rgba(255,255,255,.09)' : 'rgba(20,24,44,.10)';
+  const bg = bgHex();
+  ctx.fillStyle = bg; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle = luminance(bg) < 0.4 ? 'rgba(255,255,255,.09)' : 'rgba(20,24,44,.10)';
   for(let y=16;y<H;y+=16) for(let x=12;x<W;x+=16){ ctx.beginPath(); ctx.arc(x,y,0.9,0,6.2832); ctx.fill(); }
 }
 function rr(ctx,x,y,w,h,r){ ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x,y,w,h,r) : ctx.rect(x,y,w,h); }
@@ -877,7 +938,7 @@ for(const k of ['A','B']){
   const f = frames[k];
   try{ f.r = new CueRenderer(f.gl); for(const m of MAT_KEYS) f.r.program(m); }
   catch(e){ glError = e; console.error(e); const d=document.createElement('div'); d.className='gl-error'; d.textContent='프리뷰를 그릴 수 없습니다: '+e.message; f.dev.appendChild(d); }
-  f.items = [0,1,2,3,4].map(()=>{ const d=document.createElement('div'); d.className='item'; d.style.opacity='0'; f.comp.appendChild(d); return d; });
+  f.items = [0,1,2,3,4].map(()=>{ const d=document.createElement('div'); d.className='item'; d.innerHTML='<i class="bg"></i><i class="ic"></i><i class="b1"></i><i class="b2"></i>'; d.style.opacity='0'; f.comp.appendChild(d); return d; });
   f.scale = 1;
 }
 const hudA = { tl:$('#hudA [data-k=tl]'), tr:$('#hudA [data-k=tr]'), bl:$('#hudA [data-k=bl]'), br:$('#hudA [data-k=br]') };
@@ -926,7 +987,7 @@ function layout(){
     ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,pw,ph);
     if(f.app) drawAppBg(ctx, SCREEN.w, SCREEN.h, f.scale, dark, f.push||0, f.full||0); else drawGridBg(ctx, SCREEN.w, SCREEN.h, f.scale, dark);
     if(f.r) f.r.setBg(f.bg);
-    f.dev.style.setProperty('--hud', dark ? '#7D8292' : '#7A7F8D');
+    f.dev.style.setProperty('--hud', luminance(bgHex()) < 0.4 ? '#8A8FA0' : '#6E7381');
   }
   const fs = Math.max(9, 11*f_css());
   for(const [k,el] of Object.entries(hudA)){
@@ -978,12 +1039,27 @@ let lastSeg = -1, lastLevel = -1;
 const rgba = (c)=>`rgba(${c[0]},${c[1]},${c[2]},${(+c[3]).toFixed(3)})`;
 const mixc = (a,b,t)=>[Math.round(lerp(a[0],b[0],t)),Math.round(lerp(a[1],b[1],t)),Math.round(lerp(a[2],b[2],t)),lerp(a[3],b[3],t)];
 function rowStyles(){
-  const dark = effectiveDark(), acc = hexToRgb(sortedStops()[0].color).map(v=>Math.round(v*255));
+  const to255 = h => hexToRgb(h).map(v=>Math.round(v*255));
+  const acc = to255(accentHex()), sf = surfaceHex(), light = luminance(sf) > 0.5;
   return {
     card:{ bg:[255,255,255,0.22], ic:[255,255,255,0.88], b1:[255,255,255,0.88], b2:[255,255,255,0.55] },
-    full: dark ? { bg:[30,32,40,0.86], ic:[...acc,0.95], b1:[235,237,245,0.6], b2:[235,237,245,0.3] }
-               : { bg:[255,255,255,0.86], ic:[...acc,0.95], b1:[22,24,32,0.55], b2:[22,24,32,0.28] },
+    full:{ bg:[...to255(sf),0.86], ic:[...acc,0.95],
+           b1: light ? [22,24,32,0.55] : [235,237,245,0.6], b2: light ? [22,24,32,0.28] : [235,237,245,0.3] },
   };
+}
+// row geometry in dp (mirrors CueComponents in the generated Kotlin)
+function itemGeom(it){ const ic = Math.min(lerp(28,40,it.sf), it.h-12); return { ic, icx:12, icy:(it.h-ic)/2, bx:24+ic, b1y:it.h/2-10, b1w:it.w*0.45, b2y:it.h/2+3, b2w:it.w*0.28 }; }
+function drawItems2D(o, items, x0, y0, s, st){
+  for(const it of items){
+    if(it.a<=0.001 || it.h<8) continue;
+    const g = itemGeom(it);
+    o.save(); o.globalAlpha = it.a; o.setTransform(s,0,0,s,x0+it.x*s,y0+it.y*s);
+    o.fillStyle = rgba(mixc(st.card.bg,st.full.bg,it.sf)); rr(o,0,0,it.w,it.h,14); o.fill();
+    o.fillStyle = rgba(mixc(st.card.ic,st.full.ic,it.sf)); o.beginPath(); o.arc(g.icx+g.ic/2, g.icy+g.ic/2, Math.max(g.ic/2,0.1), 0, 6.2832); o.fill();
+    o.fillStyle = rgba(mixc(st.card.b1,st.full.b1,it.sf)); rr(o,g.bx,g.b1y,g.b1w,7,3.5); o.fill();
+    o.fillStyle = rgba(mixc(st.card.b2,st.full.b2,it.sf)); rr(o,g.bx,g.b2y,g.b2w,6,3); o.fill();
+    o.restore();
+  }
 }
 function renderFrame(k, fr){
   const f = frames[k]; if(!f.r) return;
@@ -997,14 +1073,14 @@ function renderFrame(k, fr){
   f.items.forEach((el,i)=>{
     const it = fr.items[i];
     if(it.a<=0.001 || it.h<8){ if(el.style.opacity!=='0') el.style.opacity='0'; return; }
-    el.style.width = (it.w*c)+'px'; el.style.height = (it.h*c)+'px';
     el.style.transform = `translate(${it.x*c}px, ${it.y*c}px)`;
     el.style.opacity = it.a.toFixed(3);
-    el.style.setProperty('--ic', Math.round(Math.min(lerp(28,40,it.sf), it.h-12)*c)+'px');
-    el.style.setProperty('--rb', rgba(mixc(st.card.bg, st.full.bg, it.sf)));
-    el.style.setProperty('--ri', rgba(mixc(st.card.ic, st.full.ic, it.sf)));
-    el.style.setProperty('--r1', rgba(mixc(st.card.b1, st.full.b1, it.sf)));
-    el.style.setProperty('--r2', rgba(mixc(st.card.b2, st.full.b2, it.sf)));
+    const g = itemGeom(it), [bg, ic, b1, b2] = el.children;
+    const box = (n,x,y,w,h,r,col)=>{ n.style.cssText = `transform:translate(${x*c}px,${y*c}px);width:${w*c}px;height:${h*c}px;border-radius:${r*c}px;background:${col}`; };
+    box(bg, 0, 0, it.w, it.h, 14, rgba(mixc(st.card.bg, st.full.bg, it.sf)));
+    box(ic, g.icx, g.icy, g.ic, g.ic, g.ic/2, rgba(mixc(st.card.ic, st.full.ic, it.sf)));
+    box(b1, g.bx, g.b1y, g.b1w, 7, 3.5, rgba(mixc(st.card.b1, st.full.b1, it.sf)));
+    box(b2, g.bx, g.b2y, g.b2w, 6, 3, rgba(mixc(st.card.b2, st.full.b2, it.sf)));
   });
   if(k==='A'){ hudA.bl.textContent = `L${fr.level} / 3`; hudA.br.textContent = fr.seg.name; }
 }
@@ -1030,13 +1106,15 @@ function changed(opts={}){
   saveSpec(); scheduleCode();
   if(opts.thumbs) scheduleThumbs();
 }
-function rangeCtrl(host, label, unit, min, max, step, get, set, fmt){
-  const id = 'r-'+Math.random().toString(36).slice(2,8);
+function rangeCtrl(host, label, unit, min, max, step, get, set, def){
+  const id = 'r-'+label.replace(/\W/g,'')+'-'+Math.random().toString(36).slice(2,6);
   const w = document.createElement('div'); w.className='ctrl';
-  w.innerHTML = `<div class="row-label"><label for="${id}">${label}</label><output for="${id}"></output></div><input type="range" id="${id}" min="${min}" max="${max}" step="${step}">`;
-  const inp = w.querySelector('input'), out = w.querySelector('output');
-  const paint = ()=>{ const v=get(); inp.value=v; out.textContent = (fmt?fmt(v):(+v).toFixed(step<0.1?2:step<1?1:0)) + (unit?` ${unit}`:''); inp.style.setProperty('--p', ((v-min)/(max-min)*100)+'%'); };
+  w.innerHTML = `<div class="row-label"><label for="${id}">${label}</label><span class="rv"><output for="${id}"></output><button class="rst" type="button" title="기본값으로" aria-label="${label} 기본값으로" hidden>↺</button></span></div><input type="range" id="${id}" min="${min}" max="${max}" step="${step}">`;
+  const inp = w.querySelector('input'), out = w.querySelector('output'), rst = w.querySelector('.rst');
+  const paint = ()=>{ const v=get(); inp.value=v; out.textContent = (+v).toFixed(step<0.1?2:step<1?1:0) + (unit?` ${unit}`:''); inp.style.setProperty('--p', ((v-min)/(max-min)*100)+'%');
+    rst.hidden = def==null || Math.abs(v-def) < step/2; };
   inp.addEventListener('input', ()=>{ set(+inp.value); paint(); });
+  rst.addEventListener('click', ()=>{ set(def); paint(); });
   host.appendChild(w); paint(); w.paint = paint; return w;
 }
 function segCtrl(el, get, set){
@@ -1075,21 +1153,22 @@ function paintGrad(){
     gradEl.appendChild(b);
   });
   const st = S.stops[selStop];
-  stopColor.value = st.color.toLowerCase(); stopHex.value = st.color.toUpperCase(); stopName.value = st.name||'';
+  stopColor.style.background = st.color; stopHex.value = st.color.toUpperCase(); stopName.value = st.name||'';
   stopDel.disabled = S.stops.length<=1; stopAdd.disabled = S.stops.length>=3;
   $('#gradPos').textContent = `${st.name||'Stop'} · ${Math.round(st.pos*100)}%`;
 }
 function startDrag(e, i){
   e.preventDefault(); selStop = i; paintGrad();
-  const rect = gradEl.getBoundingClientRect();
-  const move = ev=>{ S.stops[i].pos = clamp01((ev.clientY - rect.top - PAD)/(rect.height-PAD*2)); S.preset=null;
+  const rect = gradEl.getBoundingClientRect(), y0 = e.clientY; let moved = false;
+  const move = ev=>{ if(!moved && Math.abs(ev.clientY-y0) < 3) return; moved = true; S.stops[i].pos = clamp01((ev.clientY - rect.top - PAD)/(rect.height-PAD*2)); S.preset=null;
     const n = gradEl.querySelectorAll('.stop')[i]; n.style.top = (PAD + S.stops[i].pos*(rect.height-PAD*2))+'px';
     gradEl.style.background = cssGrad(S.stops); $('#gradPos').textContent = `${S.stops[i].name||'Stop'} · ${Math.round(S.stops[i].pos*100)}%`; changed(); };
-  const up = ()=>{ window.removeEventListener('pointermove',move); window.removeEventListener('pointerup',up); paintGrad(); paintPresets(); changed({thumbs:true}); };
+  const up = ()=>{ window.removeEventListener('pointermove',move); window.removeEventListener('pointerup',up); paintGrad(); paintPresets();
+    if(moved) changed({thumbs:true}); else openPicker(gradEl.querySelectorAll('.stop .sq')[i], S.stops[i].color, setStopColor); };
   window.addEventListener('pointermove',move); window.addEventListener('pointerup',up);
 }
 function setStopColor(hex){ S.stops[selStop].color = hex.toUpperCase(); S.preset=null; paintGrad(); paintPresets(); changed({thumbs:true}); }
-stopColor.addEventListener('input', ()=>setStopColor(stopColor.value));
+stopColor.addEventListener('click', ()=>openPicker(stopColor, S.stops[selStop].color, setStopColor));
 stopHex.addEventListener('change', ()=>{ let v=stopHex.value.trim(); if(!v.startsWith('#')) v='#'+v; if(/^#[0-9a-fA-F]{6}$/.test(v)) setStopColor(v); else { stopHex.value=S.stops[selStop].color; toast('HEX는 #RRGGBB 형식으로 입력하세요'); } });
 stopName.addEventListener('input', ()=>{ S.stops[selStop].name = stopName.value; const lb=gradEl.querySelectorAll('.stop .lb')[selStop]; if(lb) lb.firstChild.textContent = stopName.value||'Stop'; changed(); });
 stopDel.onclick = ()=>{ if(S.stops.length<=1) return; S.stops.splice(selStop,1); selStop=0; S.preset=null; paintGrad(); paintPresets(); changed({thumbs:true}); };
@@ -1098,8 +1177,8 @@ stopAdd.onclick = ()=>{ if(S.stops.length>=3) return; const st=sortedStops();
   S.stops.push({color: st.length? st[st.length-1].color : '#3A77FF', pos, name:'New'}); selStop=S.stops.length-1; S.preset=null; paintGrad(); paintPresets(); changed({thumbs:true}); };
 const paintGradType = segCtrl($('#gradType'), ()=>S.gradType, v=>{ S.gradType=v; changed({thumbs:true}); });
 const colorCtrls = [
-  rangeCtrl($('#colorCtrls'),'하이라이트 가로','',-0.8,0.8,0.01,()=>S.hlX,v=>{S.hlX=v;changed({thumbs:true});}),
-  rangeCtrl($('#colorCtrls'),'하이라이트 세로','',-0.8,0.8,0.01,()=>S.hlY,v=>{S.hlY=v;changed({thumbs:true});}),
+  rangeCtrl($('#colorCtrls'),'하이라이트 가로','',-0.8,0.8,0.01,()=>S.hlX,v=>{S.hlX=v;changed({thumbs:true});},defaultSpec().hlX),
+  rangeCtrl($('#colorCtrls'),'하이라이트 세로','',-0.8,0.8,0.01,()=>S.hlY,v=>{S.hlY=v;changed({thumbs:true});},defaultSpec().hlY),
 ];
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
@@ -1116,21 +1195,212 @@ function paintMat(){
   const m = MATS[S.material];
   $('#matDesc').textContent = m.desc; $('#matHint').textContent = m.en;
   const host = $('#matCtrls'); host.innerHTML='';
-  m.params.forEach(([label,min,max,step],i)=>rangeCtrl(host,label,'',min,max,step,()=>S.matParams[S.material][i],v=>{S.matParams[S.material][i]=v;changed({thumbs:true});}));
+  m.params.forEach(([label,min,max,step],i)=>rangeCtrl(host,label,'',min,max,step,()=>S.matParams[S.material][i],v=>{S.matParams[S.material][i]=v;changed({thumbs:true});},m.def[i]));
 }
 
 // size / motion / shadow
 const ctrlSets = [];
-function addSet(host, defs, motion){ defs.forEach(([k,label,unit,min,max,step])=>ctrlSets.push(rangeCtrl($(host),label,unit,min,max,step,()=>S[k],v=>{S[k]=v;changed({motion:true, thumbs:k==='diameter'});}))); }
+function addSet(host, defs){ const d = defaultSpec(); defs.forEach(([k,label,unit,min,max,step])=>ctrlSets.push(rangeCtrl($(host),label,unit,min,max,step,()=>S[k],v=>{S[k]=v;changed({motion:true, thumbs:k==='diameter'});},d[k]))); }
 addSet('#sizeCtrls', [['diameter','구 지름','dp',64,220,1],['cardH','안착 높이','dp',120,360,1],['cardThick','안착 두께','dp',2,40,1],['cardCorner','안착 모서리','dp',0,48,1],['margin','좌우 여백','dp',0,40,1]]);
 addSet('#motionCtrls', [['speed','재생 속도','×',0.25,2,0.05],['transMs','전환 시간','ms',300,1600,10],['l1Hold','L1 유지','ms',500,6000,50],['l2Hold','L2 유지','ms',500,6000,50],['l3Hold','L3 유지','ms',500,6000,50],['fadeMs','나타남·사라짐','ms',150,2000,10],['floatAmp','부유 진폭','dp',0,10,0.5],['floatPeriod','부유 주기','ms',800,5000,50],['drift','하이라이트 흔들림','',0,1,0.01],['stagger','컴포넌트 간격','ms',0,200,5]]);
 addSet('#shadowCtrls', [['shadow','그림자 강도','',0,1,0.01],['shadowBlur','그림자 번짐','dp',2,40,1],['shadowOff','그림자 거리','dp',0,32,1]]);
 const paintTrans = segCtrl($('#transStyle'), ()=>S.transition, v=>{ S.transition=v; changed({motion:true}); });
 const paintEase = segCtrl($('#easing'), ()=>S.easing, v=>{ S.easing=v; $('#easeOut').textContent = EASINGS[v].join(', '); changed({motion:true}); });
 $('#easeOut').textContent = EASINGS[S.easing].join(', ');
-$('#resetAll').onclick = ()=>{ S = defaultSpec(); selStop=0; repaintAll(); changed({motion:true, thumbs:true}); toast('기본값으로 되돌렸습니다'); };
-function repaintAll(){ paintGrad(); paintPresets(); paintMat(); paintGradType(); paintTrans(); paintEase(); $('#easeOut').textContent = EASINGS[S.easing].join(', ');
+const SECTION_KEYS = {
+  color:['stops','preset','gradType','angle','hlX','hlY','listAccent','listSurface','shadowColor','bgColor'],
+  mat:['material','matParams'],
+  size:['diameter','cardH','cardThick','cardCorner','margin'],
+  motion:['speed','transMs','fadeMs','l1Hold','l2Hold','l3Hold','settleMs','floatAmp','floatPeriod','drift','stagger','transition','easing'],
+  shadow:['shadow','shadowBlur','shadowOff'],
+};
+const SECTION_NAMES = { color:'컬러', mat:'물성', size:'크기', motion:'모션', shadow:'그림자' };
+function afterReset(msg){ closePicker(); repaintAll(); changed({motion:true, thumbs:true}); layout(); toast(msg); }
+document.querySelectorAll('[data-reset]').forEach(b=>b.addEventListener('click', ()=>{
+  const sec = b.dataset.reset, d = defaultSpec();
+  for(const k of SECTION_KEYS[sec]) S[k] = JSON.parse(JSON.stringify(d[k]));
+  if(sec==='color') selStop = 0;
+  afterReset(`${SECTION_NAMES[sec]}을(를) 기본값으로 되돌렸습니다`);
+}));
+$('#resetAll').onclick = ()=>{ S = defaultSpec(); selStop=0; afterReset('전체 설정을 기본값으로 되돌렸습니다'); };
+function repaintAll(){ paintGrad(); paintPresets(); paintMat(); paintGradType(); paintTrans(); paintEase(); paintExtras(); $('#easeOut').textContent = EASINGS[S.easing].join(', ');
   colorCtrls.forEach(c=>c.paint()); ctrlSets.forEach(c=>c.paint()); }
+
+// extra colours (null = automatic)
+const COLOR_EXTRAS = [
+  ['listAccent',  '리스트 강조색',    accentHex,  '첫 번째 스톱'],
+  ['listSurface', '리스트 카드 배경', surfaceHex, '테마'],
+  ['shadowColor', '그림자 색',        shadowHex,  '첫 스톱을 어둡게'],
+  ['bgColor',     '① 프리뷰 배경',    bgHex,      '테마'],
+];
+function paintExtras(){
+  const host = $('#colorRows');
+  if(!host.children.length){
+    COLOR_EXTRAS.forEach(([k,label])=>{
+      const r = document.createElement('div'); r.className='crow'; r.dataset.k=k;
+      r.innerHTML = `<button class="swatch-btn" type="button" aria-label="${label} 변경"></button><div class="crow-t"><span>${label}</span><small class="mono"></small></div><button class="link-btn" type="button">자동으로</button>`;
+      const [sw,,auto] = r.children;
+      sw.onclick = ()=>openPicker(sw, COLOR_EXTRAS.find(x=>x[0]===k)[2](), hex=>{ S[k]=hex; paintExtras(); onExtraChanged(k); });
+      auto.onclick = ()=>{ S[k]=null; paintExtras(); onExtraChanged(k); };
+      host.appendChild(r);
+    });
+  }
+  COLOR_EXTRAS.forEach(([k,,resolve,autoLabel])=>{
+    const r = host.querySelector(`[data-k="${k}"]`), [sw,t,auto] = r.children, v = resolve();
+    sw.style.background = v; t.querySelector('small').textContent = S[k] ? v : `${v} · 자동(${autoLabel})`; auto.hidden = !S[k];
+  });
+}
+function onExtraChanged(k){ changed({thumbs: k==='shadowColor' || k==='bgColor'}); if(k==='bgColor') layout(); }
+
+// colour picker
+const picker = $('#picker'), pkSV = $('#pkSV'), pkDot = $('#pkDot'), pkHue = $('#pkHue'), pkHex = $('#pkHex'), pkPrev = $('#pkPrev');
+let pkCb = null, pkAnchor = null, pkH = 0, pkS = 0, pkV = 0;
+function hexToHsv(hex){ const [r,g,b] = hexToRgb(hex), mx = Math.max(r,g,b), mn = Math.min(r,g,b), d = mx-mn; let h = 0;
+  if(d){ if(mx===r) h = ((g-b)/d)%6; else if(mx===g) h = (b-r)/d+2; else h = (r-g)/d+4; h *= 60; if(h<0) h += 360; }
+  return [h, mx ? d/mx : 0, mx]; }
+function hsvToHex(h,s,v){ const f = n=>{ const k = (n + h/60) % 6; return v - v*s*Math.max(0, Math.min(k, 4-k, 1)); }; return toHex([f(5), f(3), f(1)]); }
+function paintPicker(){ const hex = hsvToHex(pkH,pkS,pkV);
+  pkSV.style.background = `linear-gradient(to top,#000,transparent),linear-gradient(to right,#fff,hsl(${pkH},100%,50%))`;
+  pkDot.style.left = (pkS*100)+'%'; pkDot.style.top = ((1-pkV)*100)+'%'; pkDot.style.background = hex;
+  pkHue.value = pkH; pkPrev.style.background = hex; if(document.activeElement !== pkHex) pkHex.value = hex; }
+function emitPicker(){ paintPicker(); if(pkCb) pkCb(hsvToHex(pkH,pkS,pkV)); }
+function openPicker(anchor, hex, cb){
+  pkCb = cb; pkAnchor = anchor; [pkH,pkS,pkV] = hexToHsv(hex); picker.hidden = false; paintPicker();
+  const a = anchor.getBoundingClientRect(), pw = picker.offsetWidth, ph = picker.offsetHeight;
+  let x = Math.min(window.innerWidth - pw - 12, Math.max(12, a.left));
+  let y = a.bottom + 8; if(y + ph > window.innerHeight - 12) y = Math.max(12, a.top - ph - 8);
+  picker.style.left = x+'px'; picker.style.top = y+'px';
+}
+function closePicker(){ picker.hidden = true; pkCb = null; pkAnchor = null; }
+pkSV.addEventListener('pointerdown', e=>{
+  pkSV.setPointerCapture(e.pointerId);
+  const set = ev=>{ const r = pkSV.getBoundingClientRect(); pkS = clamp01((ev.clientX-r.left)/r.width); pkV = 1-clamp01((ev.clientY-r.top)/r.height); emitPicker(); };
+  set(e); const mv = ev=>set(ev), up = ()=>{ pkSV.removeEventListener('pointermove',mv); pkSV.removeEventListener('pointerup',up); };
+  pkSV.addEventListener('pointermove',mv); pkSV.addEventListener('pointerup',up);
+});
+pkHue.addEventListener('input', ()=>{ pkH = +pkHue.value; emitPicker(); });
+pkHex.addEventListener('change', ()=>{ let v = pkHex.value.trim(); if(!v.startsWith('#')) v = '#'+v;
+  if(/^#[0-9a-fA-F]{6}$/.test(v)){ [pkH,pkS,pkV] = hexToHsv(v); emitPicker(); } else { pkHex.value = hsvToHex(pkH,pkS,pkV); toast('HEX는 #RRGGBB 형식으로 입력하세요'); } });
+$('#pkDone').onclick = closePicker;
+[...new Set([...Object.values(PRESETS).flatMap(p=>p.stops.map(s=>s.color)), '#FFFFFF','#F3F4F6','#1E2028','#101116','#000000','#FF6B6B','#FFB547','#2BC48A','#14B8C4','#FF4FA3','#8E5CFF'])].slice(0,20).forEach(c=>{
+  const b = document.createElement('button'); b.type='button'; b.style.background=c; b.title=c; b.setAttribute('aria-label', c);
+  b.onclick = ()=>{ [pkH,pkS,pkV] = hexToHsv(c); emitPicker(); }; $('#pkSw').appendChild(b);
+});
+document.addEventListener('pointerdown', e=>{ if(!picker.hidden && !picker.contains(e.target) && e.target !== pkAnchor && !e.target.closest('.stop')) closePicker(); });
+document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closePicker(); closeExport(); } });
+
+/* ---------- export one loop as MP4 / GIF ---------- */
+const exportBtn = $('#exportBtn'), exportPop = $('#exportPop');
+let exTarget = ['both','A','B'][view] || 'both', exporting = false;
+const paintExTarget = segCtrl($('#exTarget'), ()=>exTarget, v=>{ exTarget = v; });
+function closeExport(){ if(exporting) return; exportPop.hidden = true; exportBtn.setAttribute('aria-expanded','false'); }
+exportBtn.onclick = ()=>{ if(!exportPop.hidden){ closeExport(); return; } exTarget = ['both','A','B'][view]; paintExTarget(); exportPop.hidden = false; exportBtn.setAttribute('aria-expanded','true'); };
+document.addEventListener('pointerdown', e=>{ if(!exportPop.hidden && !exportPop.contains(e.target) && e.target !== exportBtn) closeExport(); });
+function exProgress(f, msg){ $('#exProg').hidden = false; $('#exBar').style.width = (f*100).toFixed(1)+'%'; $('#exMsg').textContent = msg; }
+const nextTick = ()=>new Promise(r=>setTimeout(r,0));
+function loadScript(src){ return new Promise((res,rej)=>{ const el = document.createElement('script'); el.src = src; el.onload = res; el.onerror = ()=>rej(new Error('인코딩 라이브러리를 불러오지 못했습니다. 네트워크를 확인해 주세요.')); document.head.appendChild(el); }); }
+let gifencLib = null;
+async function getGifenc(){
+  if(gifencLib) return gifencLib;
+  const prev = window.exports; window.exports = {};          // gifenc ships as CommonJS
+  try{ await loadScript('https://cdn.jsdelivr.net/npm/gifenc@1.0.3/dist/gifenc.js'); gifencLib = window.exports; }
+  finally{ if(prev === undefined) delete window.exports; else window.exports = prev; }
+  return gifencLib;
+}
+let downloadsP = null;
+function getDownloads(){ if(!downloadsP) downloadsP = (window.claude && typeof window.claude.use === 'function') ? Promise.resolve(window.claude.use('downloads')).catch(()=>null) : Promise.resolve(null); return downloadsP; }
+async function saveFile(filename, blob){
+  const dl = await getDownloads();
+  if(dl){
+    try{ await dl.save({ filename, data: blob }); toast(`${filename} 저장 완료`); }
+    catch(e){ toast(e && e.code === 'declined' ? '저장을 취소했습니다' : '이 화면에서는 파일을 저장할 수 없습니다'); }
+    return;
+  }
+  const url = URL.createObjectURL(blob), a = document.createElement('a');
+  a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 10000); toast(`${filename} 다운로드를 시작했습니다`);
+}
+const exGL = document.createElement('canvas'), exBg = document.createElement('canvas'), exOut = document.createElement('canvas');
+const exCtx = exOut.getContext('2d', { willReadFrequently: true });
+let exportR = null;
+function composeExportFrame(keys, scale, tl, clock, pad, gap, stageCol){
+  const pw = SCREEN.w*scale, ph = SCREEN.h*scale, dark = effectiveDark(), st = rowStyles();
+  exCtx.setTransform(1,0,0,1,0,0); exCtx.globalAlpha = 1; exCtx.fillStyle = stageCol; exCtx.fillRect(0,0,exOut.width,exOut.height);
+  keys.forEach((k, idx)=>{
+    const fr = sampleFrame(tl, k==='A' ? POSES_A : POSES_B), b = exBg.getContext('2d');
+    b.setTransform(1,0,0,1,0,0);
+    if(k==='B') drawAppBg(b, SCREEN.w, SCREEN.h, scale, dark, fr.push, fr.full); else drawGridBg(b, SCREEN.w, SCREEN.h, scale, dark);
+    exportR.setBg(exBg);
+    exportR.draw(S.material, buildUniforms(fr, scale, pw, ph, k==='B', clock));
+    const x = pad + idx*(pw+gap), y = pad;
+    exCtx.save();
+    if(keys.length > 1){ rr(exCtx, x, y, pw, ph, 30*scale); exCtx.clip(); }
+    exCtx.drawImage(exBg, x, y); exCtx.drawImage(exGL, x, y);
+    drawItems2D(exCtx, fr.items, x, y, scale, st);
+    exCtx.restore();
+  });
+}
+async function encodeGif(N, fps, frameAt, W, H){
+  const { GIFEncoder, quantize, applyPalette } = await getGifenc();
+  const gif = GIFEncoder(), delay = Math.round(1000/fps);
+  for(let i=0;i<N;i++){
+    frameAt(i);
+    const { data } = exCtx.getImageData(0,0,W,H);
+    const palette = quantize(data, 256), index = applyPalette(data, palette);
+    gif.writeFrame(index, W, H, { palette, delay, repeat: 0 });   // repeat 0 = loop forever
+    exProgress((i+1)/N, `GIF 만드는 중 ${i+1} / ${N}`); await nextTick();
+  }
+  gif.finish();
+  return new Blob([gif.bytes()], { type:'image/gif' });
+}
+async function encodeMp4(N, fps, frameAt, W, H){
+  if(typeof VideoEncoder === 'undefined' || typeof VideoFrame === 'undefined') throw new Error('이 브라우저는 MP4 인코딩을 지원하지 않습니다. 최신 Chrome, Edge, Safari에서 시도해 주세요.');
+  if(!window.Mp4Muxer) await loadScript('https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.js');
+  // H.264 first (plays everywhere); VP9 / AV1 in MP4 only when this browser has no H.264 encoder
+  let config = null, mux = 'avc';
+  for(const [codec, m] of [['avc1.640033','avc'],['avc1.4d0033','avc'],['avc1.42003e','avc'],['vp09.00.40.08','vp9'],['av01.0.08M.08','av1']]){
+    const c = { codec, width:W, height:H, bitrate:8_000_000, framerate:fps };
+    try{ if((await VideoEncoder.isConfigSupported(c)).supported){ config = c; mux = m; break; } }catch(e){}
+  }
+  if(!config) throw new Error('이 브라우저에서 MP4 인코딩을 쓸 수 없습니다. 최신 Chrome, Edge, Safari에서 시도해 주세요.');
+  if(mux !== 'avc') toast(`이 브라우저에 H.264 인코더가 없어 ${mux.toUpperCase()} 코덱으로 저장합니다`);
+  const muxer = new Mp4Muxer.Muxer({ target:new Mp4Muxer.ArrayBufferTarget(), video:{ codec:mux, width:W, height:H, frameRate:fps }, fastStart:'in-memory' });
+  let err = null;
+  const enc = new VideoEncoder({ output:(chunk, meta)=>muxer.addVideoChunk(chunk, meta), error:e=>{ err = e; } });
+  enc.configure(config);
+  for(let i=0;i<N;i++){
+    if(err) throw err;
+    frameAt(i);
+    const vf = new VideoFrame(exOut, { timestamp:Math.round(i*1e6/fps), duration:Math.round(1e6/fps) });
+    enc.encode(vf, { keyFrame: i % (fps*2) === 0 }); vf.close();
+    exProgress((i+1)/N*0.97, `MP4 만드는 중 ${i+1} / ${N}`);
+    if(i % 2 === 0 || enc.encodeQueueSize > 6) await nextTick();
+  }
+  await enc.flush(); enc.close(); muxer.finalize();
+  if(err) throw err;
+  return new Blob([muxer.target.buffer], { type:'video/mp4' });
+}
+async function runExport(fmt){
+  if(exporting) return;
+  exporting = true; $('#exMp4').disabled = $('#exGif').disabled = true; exProgress(0, '준비 중…');
+  try{
+    const keys = exTarget==='both' ? ['A','B'] : [exTarget];
+    const scale = fmt==='gif' ? 1 : 2, fps = fmt==='gif' ? 15 : 30;
+    const pw = SCREEN.w*scale, ph = SCREEN.h*scale, pad = keys.length>1 ? 24*scale : 0, gap = 24*scale;
+    let W = keys.length*pw + (keys.length-1)*gap + pad*2, H = ph + pad*2; W += W%2; H += H%2;
+    exGL.width = exBg.width = pw; exGL.height = exBg.height = ph; exOut.width = W; exOut.height = H;
+    if(!exportR) exportR = new CueRenderer(exGL);
+    const stageCol = getComputedStyle(document.documentElement).getPropertyValue('--stage').trim() || '#DFE2E8';
+    const N = Math.max(1, Math.round(TL.len / S.speed / 1000 * fps));
+    const frameAt = i => composeExportFrame(keys, scale, (i/N)*TL.len, (i/fps)*S.speed, pad, gap, stageCol);
+    const blob = fmt==='gif' ? await encodeGif(N, fps, frameAt, W, H) : await encodeMp4(N, fps, frameAt, W, H);
+    exProgress(1, `완료 · ${(blob.size/1048576).toFixed(1)}MB`);
+    await saveFile(`ai-visual-cue-${{A:'cue', B:'in-app', both:'compare'}[exTarget]}-loop.${fmt}`, blob);
+  }catch(e){ console.error(e); exProgress(0, e && e.message ? e.message : String(e)); }
+  finally{ exporting = false; $('#exMp4').disabled = $('#exGif').disabled = false; }
+}
+$('#exMp4').onclick = ()=>runExport('mp4');
+$('#exGif').onclick = ()=>runExport('gif');
 
 // material thumbnails (third tiny GL context)
 let thumbR = null, thumbTimer = 0;
@@ -1221,6 +1491,7 @@ import androidx.compose.ui.graphics.ShaderBrush
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -1249,6 +1520,9 @@ ${st.map(s=>`        CueStop(${kargb(s.color)}, ${kf(s.pos)}),${s.name?` // ${s.
     val materialParams: List<Float> = listOf(${[0,1,2,3].map(i=>kf(mp[i]||0)).join(', ')}), // ${m.params.map(p=>p[0]).join(' · ')}
     val glow: Float = ${kf(glowV)},
     val edgeSoftness: Float = ${kf(edgeV)},
+    val listAccent: Long = ${kargb(accentHex())},
+    val listSurface: Long? = ${S.listSurface ? kargb(S.listSurface) : 'null'},   // null = follow the system theme
+    val shadowColor: Long = ${kargb(shadowHex())},
     val sphereDiameter: Float = ${kf(S.diameter)},
     val cardHeight: Float = ${kf(S.cardH)},
     val cardThickness: Float = ${kf(S.cardThick)},
@@ -1525,14 +1799,15 @@ private fun rememberCueTimeMs(): State<Float> = produceState(0f) {
 @Composable
 private fun CueLayer(spec: AiVisualCueSpec, frame: CueFrame, timeMs: Float, background: Shader?) {
     val dark = isSystemInDarkTheme()
-    val accent = remember(spec.stops) { Color(spec.stops.minByOrNull { it.position }?.argb ?: 0xFF3A77FF) }
+    val accent = Color(spec.listAccent)
+    val surface = spec.listSurface?.let { Color(it) }
     Box(Modifier.fillMaxSize()) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             ShaderCue(spec, frame, timeMs, background)
         } else {
             FallbackCue(spec, frame)
         }
-        CueComponents(frame, accent, dark)
+        CueComponents(frame, accent, surface, dark)
     }
 }
 
@@ -1593,6 +1868,8 @@ private fun ShaderCue(spec: AiVisualCueSpec, frame: CueFrame, timeMs: Float, bac
         shader.setFloatUniform("uNeutral", 0.92f, 0.92f, 0.93f)
         shader.setFloatUniform("uEdgeSoft", spec.edgeSoftness)
         shader.setFloatUniform("uOpacity", frame.opacity)
+        val sc = Color(spec.shadowColor)
+        shader.setFloatUniform("uShadowCol", sc.red, sc.green, sc.blue)
 ${glass?`        // Frosted Glass refracts whatever you pass as [background]
         // (e.g. a BitmapShader of the screen behind the cue). Default: a soft surface gradient.
         shader.setInputShader("uBg", background ?: LinearGradient(0f, 0f, 0f, size.height, 0xFFF4F5F8.toInt(), 0xFFE2E5EE.toInt(), Shader.TileMode.CLAMP))
@@ -1617,7 +1894,7 @@ private fun FallbackCue(spec: AiVisualCueSpec, frame: CueFrame) {
         val shadowA = 0.22f * p.shadow * spec.shadowStrength * o
         if (shadowA > 0.005f) {
             drawRoundRect(
-                color = Color(sorted.first().argb).copy(alpha = shadowA),
+                color = Color(spec.shadowColor).copy(alpha = shadowA),
                 topLeft = topLeft + Offset(0f, spec.shadowOffset * p.elev * d),
                 size = sz,
                 cornerRadius = CornerRadius(r),
@@ -1652,13 +1929,15 @@ private fun FallbackCue(spec: AiVisualCueSpec, frame: CueFrame) {
 
 /** The list that appears where the cue settles (L2) and re-flows to full screen (L3). Replace with your own content. */
 @Composable
-private fun CueComponents(frame: CueFrame, accent: Color, dark: Boolean) {
+private fun CueComponents(frame: CueFrame, accent: Color, surface: Color?, dark: Boolean) {
     val cardBg = Color.White.copy(alpha = 0.22f)
     val cardBar = Color.White.copy(alpha = 0.88f)
     val cardBar2 = Color.White.copy(alpha = 0.55f)
-    val fullBg = if (dark) Color(0xDB1E2028) else Color(0xDBFFFFFF)
-    val fullBar = if (dark) Color(0x99EBEDF5) else Color(0x8C161820)
-    val fullBar2 = if (dark) Color(0x4DEBEDF5) else Color(0x47161820)
+    val base = surface ?: if (dark) Color(0xFF1E2028) else Color.White
+    val fullBg = base.copy(alpha = 0.86f)
+    val lightSurface = base.luminance() > 0.5f
+    val fullBar = if (lightSurface) Color(0x8C161820) else Color(0x99EBEDF5)
+    val fullBar2 = if (lightSurface) Color(0x47161820) else Color(0x4DEBEDF5)
     for (item in frame.items) {
         if (item.a <= 0.001f || item.h < 8f) continue
         val icon = min(mixf(28f, 40f, item.sf), item.h - 12f)
@@ -1670,7 +1949,7 @@ private fun CueComponents(frame: CueFrame, accent: Color, dark: Boolean) {
                 .background(lerp(cardBg, fullBg, item.sf), RoundedCornerShape(14.dp)),
         ) {
             Box(Modifier.offset(12.dp, ((item.h - icon) / 2f).dp).size(icon.dp).background(lerp(cardBar, accent.copy(alpha = 0.95f), item.sf), CircleShape))
-            Box(Modifier.offset((24f + icon).dp, (item.h / 2f - 10f).dp).size((item.w * 0.45f).dp, 7.dp).background(lerp(cardBar, fullBar, item.sf), RoundedCornerShape(4.dp)))
+            Box(Modifier.offset((24f + icon).dp, (item.h / 2f - 10f).dp).size((item.w * 0.45f).dp, 7.dp).background(lerp(cardBar, fullBar, item.sf), RoundedCornerShape(3.5.dp)))
             Box(Modifier.offset((24f + icon).dp, (item.h / 2f + 3f).dp).size((item.w * 0.28f).dp, 6.dp).background(lerp(cardBar2, fullBar2, item.sf), RoundedCornerShape(3.dp)))
         }
     }
