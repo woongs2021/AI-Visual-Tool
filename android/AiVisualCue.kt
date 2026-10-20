@@ -94,7 +94,7 @@ data class AiVisualCueSpec(
     val materialParams: List<Float> = listOf(0.35f, 0.5f, 0.8f, 0f), // 외곽 글로우 · 림 라이트 · 가장자리 부드러움
     val glow: Float = 0.35f,
     val edgeSoftness: Float = 0.8f,
-    val alpha: Float = 1f,                  // overall cue opacity
+    val alpha: Float = 0.5f,                  // overall cue opacity
     val listAccent: Long = 0xFF6449F5,
     val listSurface: Long? = null,   // null = follow the system theme
     val shadowColor: Long = 0xFF2D216E,
@@ -105,7 +105,7 @@ data class AiVisualCueSpec(
         "Summarize Mina’s comments" to "4 new since yesterday",
         "Block focus time" to "Tomorrow 10:00–12:00",
     ),
-    val sphereDiameter: Float = 92f,
+    val sphereDiameter: Float = 74f,
     val cardHeight: Float = 220f,
     val cardThickness: Float = 8f,
     val cardCorner: Float = 28f,

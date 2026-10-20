@@ -475,12 +475,12 @@ function defaultSpec(){
     version:1,
     stops: PRESETS.azure.stops.map(s=>({...s})), preset:'azure', gradType:'radial', angle:90, hlX:0, hlY:-0.3,
     material:'softGlow', matParams:Object.fromEntries(MAT_KEYS.map(k=>[k,[...MATS[k].def]])),
-    diameter:92, cardH:220, cardThick:8, cardCorner:28, margin:16,
+    diameter:74, cardH:220, cardThick:8, cardCorner:28, margin:16,
     shadow:0.6, shadowBlur:18, shadowOff:14,
     speed:1, transMs:800, fadeMs:600, l1Hold:2600, l2Hold:2600, l3Hold:2600, settleMs:350,
     floatAmp:3, floatPeriod:2400, drift:0.6, stagger:60, transition:'morph', easing:'reference',
     listAccent:null, listSurface:null, shadowColor:null, bgColor:null,   // null = automatic
-    alpha:1, lang:'en',
+    alpha:0.5, lang:'en', specRev:2,
   };
 }
 function loadSpec(){
@@ -489,7 +489,11 @@ function loadSpec(){
     const raw = localStorage.getItem('avc-spec-v1'); if(!raw) return d;
     const o = JSON.parse(raw); if(!o || o.version!==1) return d;
     const s = {...d, ...o, matParams:{...d.matParams, ...(o.matParams||{})}};
-    if(o.diameter===132) s.diameter = d.diameter;   // v0.1 default → new default (70%)
+    if((o.specRev||0) < 2){   // one-time move from earlier defaults to the current ones
+      if(o.diameter===132 || o.diameter===92) s.diameter = d.diameter;
+      if(o.alpha===undefined || o.alpha===1) s.alpha = d.alpha;
+    }
+    s.specRev = d.specRev;
     delete s.flatRatio; delete s.flatThick; delete s.flatHoldMs;
     if(!Array.isArray(s.stops) || !s.stops.length || s.stops.length>3) s.stops = d.stops;
     if(!MATS[s.material]) s.material = d.material;
@@ -1378,7 +1382,7 @@ function addSet(host, defs){ const d = defaultSpec(); defs.forEach(([k,label,uni
 addSet('#sizeCtrls', [['diameter','구 지름','dp',64,220,1],['cardH','안착 높이','dp',120,360,1],['cardThick','안착 두께','dp',2,40,1],['cardCorner','안착 모서리','dp',0,48,1],['margin','좌우 여백','dp',0,40,1]]);
 addSet('#motionCtrls', [['speed','재생 속도','×',0.25,2,0.05],['transMs','전환 시간','ms',300,1600,10],['l1Hold','L1 유지','ms',500,6000,50],['l2Hold','L2 유지','ms',500,6000,50],['l3Hold','L3 유지','ms',500,6000,50],['fadeMs','나타남·사라짐','ms',150,2000,10],['floatAmp','부유 진폭','dp',0,10,0.5],['floatPeriod','부유 주기','ms',800,5000,50],['drift','하이라이트 흔들림','',0,1,0.01],['stagger','컴포넌트 간격','ms',0,200,5]]);
 addSet('#shadowCtrls', [['shadow','그림자 강도','',0,1,0.01],['shadowBlur','그림자 번짐','dp',2,40,1],['shadowOff','그림자 거리','dp',0,32,1]]);
-const alphaCtrl = rangeCtrl($('#alphaCtrl'),'투명도','%',0.05,1,0.01,()=>S.alpha,v=>{S.alpha=v;changed({thumbs:true});},1, v=>Math.round(v*100));
+const alphaCtrl = rangeCtrl($('#alphaCtrl'),'투명도','%',0.05,1,0.01,()=>S.alpha,v=>{S.alpha=v;changed({thumbs:true});},defaultSpec().alpha, v=>Math.round(v*100));
 ctrlSets.push(alphaCtrl);
 const paintTrans = segCtrl($('#transStyle'), ()=>S.transition, v=>{ S.transition=v; changed({motion:true}); });
 const paintEase = segCtrl($('#easing'), ()=>S.easing, v=>{ S.easing=v; $('#easeOut').textContent = EASINGS[v].join(', '); changed({motion:true}); });
