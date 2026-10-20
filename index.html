@@ -457,6 +457,9 @@ const PRESETS = {
   ember:   { name:'Ember',   stops:[{color:'#E5384F',pos:0,name:'Crimson'},{color:'#FF8A3D',pos:0.55,name:'Tangerine'},{color:'#FFE1C7',pos:1,name:'Peach'}] },
   amber:   { name:'Amber',   stops:[{color:'#D9531E',pos:0,name:'Rust'},{color:'#FFB020',pos:0.6,name:'Amber'},{color:'#FFF1C9',pos:1,name:'Cream'}] },
   rose:    { name:'Rosé',    stops:[{color:'#C2305A',pos:0,name:'Ruby'},{color:'#FF8FA3',pos:0.7,name:'Rose'},{color:'#FFE4E1',pos:1,name:'Blush'}] },
+  mint:    { name:'Mint',    stops:[{color:'#0FA37F',pos:0,name:'Teal'},{color:'#3DDC97',pos:0.5,name:'Mint'},{color:'#DFFBEE',pos:1,name:'Foam'}] },
+  jade:    { name:'Jade',    stops:[{color:'#0B6E4F',pos:0,name:'Jade'},{color:'#2FBF71',pos:0.6,name:'Emerald'},{color:'#E3F7C8',pos:1,name:'Pistachio'}] },
+  lime:    { name:'Lime',    stops:[{color:'#1F8A4C',pos:0,name:'Pine'},{color:'#A3E635',pos:0.65,name:'Lime'},{color:'#F4FFD6',pos:1,name:'Glow'}] },
 };
 const MAT_KEYS = ['softGlow','aura','water','gas','neon','frostedGlass','liquidMetal','pearl','matteClay'];
 const BG_MATS = ['frostedGlass','water'];   // materials that refract what is behind the cue
@@ -1514,7 +1517,7 @@ pkHue.addEventListener('input', ()=>{ pkH = +pkHue.value; emitPicker(); });
 pkHex.addEventListener('change', ()=>{ let v = pkHex.value.trim(); if(!v.startsWith('#')) v = '#'+v;
   if(/^#[0-9a-fA-F]{6}$/.test(v)){ [pkH,pkS,pkV] = hexToHsv(v); emitPicker(); } else { pkHex.value = hsvToHex(pkH,pkS,pkV); toast('HEX는 #RRGGBB 형식으로 입력하세요'); } });
 $('#pkDone').onclick = closePicker;
-[...new Set([...Object.values(PRESETS).flatMap(p=>p.stops.map(s=>s.color)), '#FFFFFF','#F3F4F6','#1E2028','#101116','#000000','#FF6B6B','#FFB547','#2BC48A','#14B8C4','#FF4FA3','#8E5CFF'])].slice(0,30).forEach(c=>{
+[...new Set([...Object.values(PRESETS).flatMap(p=>p.stops.map(s=>s.color)), '#FFFFFF','#F3F4F6','#1E2028','#101116','#000000','#FF6B6B','#FFB547','#2BC48A','#14B8C4','#FF4FA3','#8E5CFF'])].slice(0,40).forEach(c=>{
   const b = document.createElement('button'); b.type='button'; b.style.background=c; b.title=c; b.setAttribute('aria-label', c);
   b.onclick = ()=>{ [pkH,pkS,pkV] = hexToHsv(c); emitPicker(); }; $('#pkSw').appendChild(b);
 });
